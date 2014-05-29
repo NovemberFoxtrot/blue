@@ -1,7 +1,8 @@
 #include <ncurses.h>
 #include <unistd.h>
+#include <string.h>
 
-#define DELAY 25000
+#define DELAY 125000
 
 int main(int argc, char *argv[])
 {
@@ -20,29 +21,13 @@ int main(int argc, char *argv[])
 
 	// Global var `stdscr` is created by the call to `initscr()`
 	getmaxyx(stdscr, max_y, max_x);
-	char *c = ">";
-	char *b = "#";
+	char c[1024] = ">";
 
 	while (1) {
 		clear();
 
-		if (x % 2 == 0) {
-		} else if (direction < 0) {
-			c = "<";
-		} else {
-			c = ">";
-		}
-
 		mvaddstr(y, x, c);
-		mvaddstr(y + 3, x, c);
-		mvaddstr(y + 4, x - 1, "/");
-		mvaddstr(y + 7, x, c);
-		mvaddstr(y + 11, x, c);
-		mvaddstr(y + 13, x, c);
-		mvaddstr(y + 17, x, c);
-		mvaddstr(y + 19, x, c);
-		mvaddstr(y + 23, x, c);
-
+		
 		refresh();
 
 		usleep(DELAY);
@@ -51,10 +36,11 @@ int main(int argc, char *argv[])
 
 		if (next_x >= max_x || next_x < 0) {
 			direction *= -1;
-
 		} else {
 			x += direction;
 		}
+
+		strcat(c, ">");
 	}
 
 	endwin();
