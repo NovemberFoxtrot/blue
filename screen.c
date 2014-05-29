@@ -3,7 +3,13 @@
 #include <string.h>
 #include <locale.h>
 
-#define DELAY 10
+#define DELAY 50
+
+#define NEW_COLOR 1
+#define RED 1000
+#define GREEN 750
+#define BLUE 750
+
 
 int main(int argc, char *argv[])
 {
@@ -18,14 +24,18 @@ int main(int argc, char *argv[])
 
 	initscr();
 	refresh();
-	cbreak();
+	//cbreak();
 	noecho();
 
 	start_color();
 
 	use_default_colors();
+
+init_color(NEW_COLOR,RED,GREEN,BLUE);
+init_pair(1,NEW_COLOR,COLOR_BLACK);
+
 	init_pair(0, COLOR_WHITE, COLOR_BLACK);
-	init_pair(1, COLOR_WHITE, COLOR_BLACK);
+	// init_pair(1, COLOR_WHITE, COLOR_BLACK);
 	init_pair(2, COLOR_BLACK, COLOR_BLACK);
 	init_pair(3, COLOR_RED, COLOR_BLACK);
 	init_pair(4, COLOR_GREEN, COLOR_BLACK);
@@ -46,20 +56,24 @@ int main(int argc, char *argv[])
 
 	char *c = " ";
 	char *bars = " ▁▂▃▃▄▅▇█";
+	char ch = 'x';
 
 	srand((unsigned)time(NULL));
 
-	while (1) {
+nodelay(stdscr,TRUE);
+	while (ch = getch() != 'q') {
+		mvaddstr(y, 0, "#");
 		mvaddstr(y, x, c);
+		mvaddch(y, x, ch);
 
 		refresh();
 
-		usleep(DELAY);
+		napms(100);
 
 		next_x = x + direction_x;
 		next_y = y + direction_y;
 
-		if (next_x >= max_x || next_x < 0) {
+		if (ch == ERR || (next_x >= max_x || next_x < 0)) {
 			direction_x *= -1;
 			if (x > 0) {
 				int r = rand() % 8;
