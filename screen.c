@@ -10,7 +10,9 @@ int main(int argc, char *argv[])
 	int x = 0, y = 0;
 	int max_y = 0, max_x = 0;
 	int next_x = 0;
-	int direction = 1;
+	int next_y = 0;
+	int direction_x = 1;
+	int direction_y = 1;
 
 	setlocale(LC_ALL, "");
 
@@ -48,26 +50,41 @@ int main(int argc, char *argv[])
 	srand((unsigned)time(NULL));
 
 	while (1) {
-		mvaddstr(rand() % max_y, x, c);
+		mvaddstr(y, x, c);
 
 		refresh();
 
 		usleep(DELAY);
 
-		next_x = x + direction + strlen(c);
+		next_x = x + direction_x;
+		next_y = y + direction_y;
 
 		if (next_x >= max_x || next_x < 0) {
-			direction *= -1;
+			direction_x *= -1;
 			if (x > 0) {
 				int r = rand() % 8;
 				attrset(A_NORMAL | COLOR_PAIR(r));
-				c = ":";
+				c = " 𐌏 ";
 
 			} else {
-				c = "(\/) (;,,;) (\/) ";
+				c = " 𐌏 ";
 			}
 		} else {
-			x += direction;
+			x += direction_x;
+		}
+
+		if (next_y >= max_y || next_y < 0) {
+			direction_y *= -1;
+			if (y > 0) {
+				int r = rand() % 8;
+				attrset(A_NORMAL | COLOR_PAIR(r));
+				c = " 𐌏 ";
+
+			} else {
+				c = " 𐌏 ";
+			}
+		} else {
+			y += direction_y;
 		}
 	}
 
