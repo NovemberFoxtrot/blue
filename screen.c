@@ -54,7 +54,6 @@ int main(int argc, char *argv[])
 	getmaxyx(stdscr, max_y, max_x);
 
 	char *c = " ";
-	char *bars = " ▁▂▃▃▄▅▇█";
 	int ch = 0;
 
 	srand((unsigned)time(NULL));
