@@ -1,3 +1,5 @@
+#include <stdlib.h>
+#include <time.h>
 #include <ncurses.h>
 #include <unistd.h>
 #include <string.h>
@@ -32,10 +34,9 @@ int main(int argc, char *argv[])
 	use_default_colors();
 
 	init_color(NEW_COLOR, RED, GREEN, BLUE);
-	init_pair(1, NEW_COLOR, COLOR_BLACK);
 
 	init_pair(0, COLOR_WHITE, COLOR_BLACK);
-	// init_pair(1, COLOR_WHITE, COLOR_BLACK);
+	init_pair(1, NEW_COLOR, COLOR_BLACK);
 	init_pair(2, COLOR_BLACK, COLOR_BLACK);
 	init_pair(3, COLOR_RED, COLOR_BLACK);
 	init_pair(4, COLOR_GREEN, COLOR_BLACK);
@@ -55,16 +56,27 @@ int main(int argc, char *argv[])
 
 	char *c = " ";
 	int ch = 0;
+	c = " 𐌏 ";
 
 	srand((unsigned)time(NULL));
+
+	for (int i = 0; i < max_x; i++) {
+		for (int j = 0; j < max_y; j++) {
+			mvaddch(j, i, '#');
+		}
+	}
+
+	refresh();
 
 	nodelay(stdscr, TRUE);
 
 	while (ch != 'q') {
 		ch = getch();
+
 		if (ch == 'c') {
 			int r = rand() % 8;
 			attrset(A_NORMAL | COLOR_PAIR(r));
+			flash();
 		}
 
 		if (ch == KEY_LEFT) {
@@ -99,10 +111,6 @@ int main(int argc, char *argv[])
 			if (x > 0) {
 				int r = rand() % 8;
 				attrset(A_NORMAL | COLOR_PAIR(r));
-				c = " 𐌏 ";
-
-			} else {
-				c = " 𐌏 ";
 			}
 		} else {
 			x += direction_x;
@@ -113,10 +121,6 @@ int main(int argc, char *argv[])
 			if (y > 0) {
 				int r = rand() % 8;
 				attrset(A_NORMAL | COLOR_PAIR(r));
-				c = " 𐌏 ";
-
-			} else {
-				c = " 𐌏 ";
 			}
 		} else {
 			y += direction_y;
