@@ -12,7 +12,7 @@
 #define GREEN 750
 #define BLUE 750
 
-#define MAX 200
+#define MAX 100
 
 struct Rock
 {
@@ -85,7 +85,7 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	rocks[0] = Rock_create("S");
+	rocks[0] = Rock_create(">");
 
 	setlocale(LC_ALL, "");
 
@@ -123,7 +123,7 @@ int main(int argc, char *argv[])
 	getmaxyx(stdscr, max_y, max_x);
 
 	for (i = 1; i < MAX; i++) {
-		rocks[i] = Rock_create("R");
+		rocks[i] = Rock_create("#");
 		rocks[i]->x = rand() % max_x;
 		rocks[i]->y = rand() % max_y;
 	}
@@ -169,13 +169,17 @@ int main(int argc, char *argv[])
 			rocks[0]->direction_x = 0;
 		}
 
+		if (ch == ' ') {
+			rocks[0]->direction_y = 1;
+			rocks[0]->direction_x = 0;
+		}
+
 		Rock_move(rocks[0], max_x, max_y);
 
 		for (i = 1; i < MAX; i++) {
 			Rock_move(rocks[i], max_x, max_y);
 
-			if (rocks[0]->x == rocks[i]->x &&
-			    rocks[0]->y == rocks[i]->y) {
+			if (rocks[0]->x == rocks[i]->x && rocks[0]->y == rocks[i]->y) {
 				mvaddstr(0, 0, "Dude!");
 				napms(1000);
 			}
