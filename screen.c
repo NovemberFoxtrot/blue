@@ -12,6 +12,8 @@
 #define GREEN 750
 #define BLUE 750
 
+#define MAX 200
+
 struct Rock
 {
 	int x;
@@ -41,8 +43,8 @@ struct Rock *Rock_create(char *ch)
 	r->next_x = 0;
 	r->next_y = 0;
 
-	r->direction_x = 1;
-	r->direction_y = 1;
+	r->direction_x = (rand() % 3) - 1;
+	r->direction_y = (rand() % 3) - 1;
 
 	r->ch = ch;
 
@@ -76,7 +78,7 @@ int main(int argc, char *argv[])
 
 	struct Rock **rocks;
 
-	rocks = malloc(10 * sizeof(struct Rock));
+	rocks = malloc(MAX * sizeof(struct Rock));
 
 	if (!rocks) {
 		printf("malloc error");
@@ -84,10 +86,6 @@ int main(int argc, char *argv[])
 	}
 
 	rocks[0] = Rock_create("S");
-
-	for (i = 1; i < 10; i++) {
-		rocks[i] = Rock_create("R");
-	}
 
 	setlocale(LC_ALL, "");
 
@@ -124,6 +122,12 @@ int main(int argc, char *argv[])
 
 	getmaxyx(stdscr, max_y, max_x);
 
+	for (i = 1; i < MAX; i++) {
+		rocks[i] = Rock_create("R");
+		rocks[i]->x = rand() % max_x;
+		rocks[i]->y = rand() % max_y;
+	}
+
 	int ch = 0;
 
 	srand((unsigned)time(NULL));
@@ -137,7 +141,7 @@ int main(int argc, char *argv[])
 
 		clear();
 
-		for (i = 0; i < 10; i++) {
+		for (i = 0; i < MAX; i++) {
 			mvaddstr(rocks[i]->y, rocks[i]->x, rocks[i]->ch);
 		}
 
@@ -167,7 +171,7 @@ int main(int argc, char *argv[])
 
 		Rock_move(rocks[0], max_x, max_y);
 
-		for (i = 1; i < 10; i++) {
+		for (i = 1; i < MAX; i++) {
 			Rock_move(rocks[i], max_x, max_y);
 
 			if (rocks[0]->x == rocks[i]->x &&
@@ -179,7 +183,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (rocks) {
-		for (i = 0; i < 10; i++) {
+		for (i = 0; i < MAX; i++) {
 			if (rocks[i]) {
 				free(rocks[i]);
 			}
