@@ -69,15 +69,24 @@ void Rock_move(struct Rock *r, int max_x, int max_y)
 
 int main(int argc, char *argv[])
 {
+	int i;
+
 	int max_y = 0;
 	int max_x = 0;
 
-	struct Rock *ship = Rock_create("S");
-	struct Rock *rock = Rock_create("R");
+	struct Rock **rocks;
 
-	if (!rock) {
+	rocks = malloc(10 * sizeof(struct Rock));
+
+	if (!rocks) {
 		printf("malloc error");
 		exit(1);
+	}
+
+	rocks[0] = Rock_create("S");
+
+	for (i = 1; i < 10; i++) {
+		rocks[i] = Rock_create("R");
 	}
 
 	setlocale(LC_ALL, "");
@@ -128,47 +137,55 @@ int main(int argc, char *argv[])
 
 		clear();
 
-		mvprintw(0, 0, "max_y:%d max_x:%d y:%d x:%d", max_y, max_x, ship->y, ship->x);
-
-		mvaddstr(ship->y, ship->x, ship->ch);
-		mvaddstr(rock->y, rock->x, rock->ch);
+		for (i = 0; i < 10; i++) {
+			mvaddstr(rocks[i]->y, rocks[i]->x, rocks[i]->ch);
+		}
 
 		refresh();
 
 		napms(100);
 
 		if (ch == KEY_LEFT) {
-			ship->direction_y = 0;
-			ship->direction_x = -1;
+			rocks[0]->direction_y = 0;
+			rocks[0]->direction_x = -1;
 		}
 
 		if (ch == KEY_RIGHT) {
-			ship->direction_y = 0;
-			ship->direction_x = 1;
+			rocks[0]->direction_y = 0;
+			rocks[0]->direction_x = 1;
 		}
 
 		if (ch == KEY_UP) {
-			ship->direction_y = -1;
-			ship->direction_x = 0;
+			rocks[0]->direction_y = -1;
+			rocks[0]->direction_x = 0;
 		}
 
 		if (ch == KEY_DOWN) {
-			ship->direction_y = 1;
-			ship->direction_x = 0;
+			rocks[0]->direction_y = 1;
+			rocks[0]->direction_x = 0;
 		}
 
-		Rock_move(ship, max_x, max_y);
-		Rock_move(rock, max_x, max_y);
+		Rock_move(rocks[0], max_x, max_y);
 
-		if (ship->x == rock->x && ship->y == rock->y) {
-			mvaddstr(0,0,"Dude!");
-		napms(1000);
-			break;
+		for (i = 1; i < 10; i++) {
+			Rock_move(rocks[i], max_x, max_y);
+
+			if (rocks[0]->x == rocks[i]->x &&
+			    rocks[0]->y == rocks[i]->y) {
+				mvaddstr(0, 0, "Dude!");
+				napms(1000);
+			}
 		}
 	}
 
-	if(ship) free(ship);
-	if(rock) free(rock);
+	if (rocks) {
+		for (i = 0; i < 10; i++) {
+			if (rocks[i]) {
+				free(rocks[i]);
+			}
+		}
+		free(rocks);
+	}
 
 	endwin();
 }
