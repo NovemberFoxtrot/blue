@@ -1,6 +1,8 @@
 #ifndef _object_h
 #define _object_h
 
+#define MAXWEAPONS 10
+
 enum ObjectType { SHIP = 0, WEAPON, ROCK, ALIEN, PLANET };
 
 struct Object

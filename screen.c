@@ -6,12 +6,6 @@
 #include "object.h"
 
 #define DELAY 100
-
-#define NEW_COLOR 1
-#define RED 1000
-#define GREEN 750
-#define BLUE 750
-
 #define MAX 10
 
 int main(int argc, char *argv[])
@@ -37,7 +31,7 @@ int main(int argc, char *argv[])
 
 	struct Object **rockets;
 
-	rockets = malloc(MAX * sizeof(struct Object));
+	rockets = malloc(MAXWEAPONS * sizeof(struct Object));
 
 	if (!rockets) {
 		printf("malloc error");
@@ -48,7 +42,6 @@ int main(int argc, char *argv[])
 
 	initscr();
 
-	refresh();
 	cbreak();
 	noecho();
 	keypad(stdscr, TRUE);
@@ -61,6 +54,8 @@ int main(int argc, char *argv[])
 
 	WINDOW *field = newwin(max_y - 3, max_x, 0, 0);
 	WINDOW *score = newwin(3, max_x, max_y - 3, 0);
+
+	mvwprintw(score, 0, 0, "hits: %d", 0);
 
 	wrefresh(field);
 	wrefresh(score);
@@ -80,16 +75,12 @@ int main(int argc, char *argv[])
 	while (ch != 'q') {
 		ch = getch();
 
-		napms(100);
+		napms(DELAY);
 
 		wclear(field);
 
 		Object_move(ship, max_x - 3, max_y - 3);
 
-		if (rockets[0]) {
-			Object_move(rockets[0], max_x - 3, max_y - 3);
-		}
-
 		for (i = 0; i < MAX; i++) {
 			Object_move(rocks[i], max_x - 3, max_y - 3);
 
@@ -110,14 +101,16 @@ int main(int argc, char *argv[])
 			}
 		}
 
-		if (rockets[0]) {
-			for (i = 0; i < MAX; i++) {
-				if (Object_collide(rockets[0], rocks[i])) {
-					rocks[i]->direction_x = 0;
-					rocks[i]->direction_y = 0;
-					rocks[i]->x = -1;
-					rocks[i]->y = -1;
-					wrefresh(field);
+		for (i = 0; i < MAXWEAPONS; i++ ) {
+			if (rockets[i]) {
+				for (j = 0; j < MAX; j++) {
+					if (Object_collide(rockets[i], rocks[j])) {
+						rocks[j]->direction_x = 0;
+						rocks[j]->direction_y = 0;
+						rocks[j]->x = -1;
+						rocks[j]->y = -1;
+						wrefresh(field);
+					}
 				}
 			}
 		}
@@ -125,13 +118,14 @@ int main(int argc, char *argv[])
 		mvwprintw(field, ship->y, ship->x, ship->ch);
 
 		for (i = 0; i < MAX; i++) {
-			mvwprintw(field, rocks[i]->y, rocks[i]->x,
-				  rocks[i]->ch);
+			mvwprintw(field, rocks[i]->y, rocks[i]->x, rocks[i]->ch);
 		}
 
-		if (rockets[0]) {
-			mvwprintw(field, rockets[0]->y, rockets[0]->x,
-				  rockets[0]->ch);
+		for (i = 0; i < MAXWEAPONS; i++ ) {
+			if (rockets[i]) {
+				Object_move(rockets[i], max_x - 3, max_y - 3);
+				mvwprintw(field, rockets[i]->y, rockets[i]->x, rockets[i]->ch);
+			}
 		}
 
 		Object_input(ship, rockets, ch);

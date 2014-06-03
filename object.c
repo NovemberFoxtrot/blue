@@ -52,13 +52,45 @@ void Object_move(struct Object *o, int max_x, int max_y)
 	}
 }
 
+char get_line_intersection(float p0_x, float p0_y, float p1_x, float p1_y,
+			   float p2_x, float p2_y, float p3_x, float p3_y,
+			   float *i_x, float *i_y)
+{
+	float s1_x, s1_y, s2_x, s2_y;
+
+	s1_x = p1_x - p0_x;
+	s1_y = p1_y - p0_y;
+	s2_x = p3_x - p2_x;
+	s2_y = p3_y - p2_y;
+
+	float s, t;
+	s = (-s1_y * (p0_x - p2_x) + s1_x * (p0_y - p2_y)) /
+	    (-s2_x * s1_y + s1_x * s2_y);
+	t = (s2_x * (p0_y - p2_y) - s2_y * (p0_x - p2_x)) /
+	    (-s2_x * s1_y + s1_x * s2_y);
+
+	if (s >= 0 && s <= 1 && t >= 0 && t <= 1) {
+		if (i_x != NULL)
+			*i_x = p0_x + (t * s1_x);
+		if (i_y != NULL)
+			*i_y = p0_y + (t * s1_y);
+		return 1;
+	}
+
+	return 0;
+}
+
 int Object_collide(const struct Object *a, const struct Object *b)
 {
 	if (a->x == b->x && a->y == b->y) {
 		return 1;
 	}
 
-	return 0;
+	float x, y;
+
+	return get_line_intersection(
+	    a->x, a->y, a->x + a->direction_x, a->y + a->direction_y, b->x,
+	    b->y, b->x + b->direction_x, b->y + b->direction_y, &x, &y);
 }
 
 void Object_input(struct Object *o, struct Object **rockets, int ch)
@@ -89,12 +121,15 @@ void Object_input(struct Object *o, struct Object **rockets, int ch)
 		break;
 
 	case ' ':
-		if (!rockets[0]) {
-			rockets[0] = Object_create("=", WEAPON);
-			rockets[0]->direction_x = o->direction_x * 2;
-			rockets[0]->direction_y = o->direction_y * 2;
-			rockets[0]->x = o->x;
-			rockets[0]->y = o->y;
+		for (int i = 0; i < MAXWEAPONS; i++) {
+			if (!rockets[i]) {
+				rockets[i] = Object_create("=", WEAPON);
+				rockets[i]->direction_x = o->direction_x * 2;
+				rockets[i]->direction_y = o->direction_y * 2;
+				rockets[i]->x = o->x;
+				rockets[i]->y = o->y;
+				return;
+			}
 		}
 		break;
 	}
