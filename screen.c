@@ -1,154 +1,48 @@
 #include <stdlib.h>
 #include <time.h>
 #include <ncurses.h>
-#include <unistd.h>
-#include <string.h>
 #include <locale.h>
 
-#define DELAY 50
+#include "object.h"
+
+#define DELAY 100
 
 #define NEW_COLOR 1
 #define RED 1000
 #define GREEN 750
 #define BLUE 750
 
-#define MAX 100
-
-struct Rock
-{
-	int x;
-	int y;
-
-	int next_x;
-	int next_y;
-
-	int direction_x;
-	int direction_y;
-
-	int max_hits;
-
-	char *ch;
-};
-
-struct Rock *Rock_create(char *ch)
-{
-	struct Rock *r = malloc(sizeof(struct Rock));
-
-	if (!r) {
-		printf("malloc error");
-		exit(1);
-	}
-
-	r->x = rand() % 10;
-	r->y = rand() % 10;
-
-	r->next_x = 0;
-	r->next_y = 0;
-
-	r->direction_x = (rand() % 3) - 1;
-	r->direction_y = (rand() % 3) - 1;
-
-	r->max_hits = 0;
-
-	r->ch = ch;
-
-	return r;
-}
-
-void Rock_move(struct Rock *r, int max_x, int max_y)
-{
-	r->next_x = r->x + r->direction_x;
-	r->next_y = r->y + r->direction_y;
-
-	if (r->next_x >= max_x || r->next_x < 0) {
-		r->direction_x *= -1;
-	} else {
-		r->x += r->direction_x;
-	}
-
-	if (r->next_y >= max_y || r->next_y < 0) {
-		r->direction_y *= -1;
-	} else {
-		r->y += r->direction_y;
-	}
-}
-
-int Rock_collide(const struct Rock *a, const struct Rock *b)
-{
-	if (a->x == b->x && a->y == b->y) {
-		return 1;
-	}
-
-	return 0;
-}
-
-void Rock_input(struct Rock *r, struct Rock **rockets, int ch)
-{
-	switch (ch) {
-	case KEY_LEFT:
-		r->direction_y = 0;
-		r->direction_x = -1;
-		r->ch = "<";
-		break;
-
-	case KEY_RIGHT:
-		r->direction_y = 0;
-		r->direction_x = 1;
-		r->ch = ">";
-		break;
-
-	case KEY_UP:
-		r->direction_y = -1;
-		r->direction_x = 0;
-		r->ch = "^";
-		break;
-
-	case KEY_DOWN:
-		r->direction_y = 1;
-		r->direction_x = 0;
-		r->ch = "v";
-		break;
-
-	case ' ':
-		if (!rockets[0]) {
-			rockets[0] = Rock_create("-");
-			rockets[0]->direction_x = r->direction_x * 2;
-			rockets[0]->direction_y = r->direction_y * 2;
-			rockets[0]->x = r->x;
-			rockets[0]->y = r->y;
-		}
-		break;
-	}
-}
+#define MAX 10
 
 int main(int argc, char *argv[])
 {
 	srand((unsigned)time(NULL));
 
 	int i;
+	int j;
 
 	int max_y = 0;
 	int max_x = 0;
 
-	struct Rock **rocks;
+	struct Object *ship = Object_create(">", SHIP);
 
-	rocks = malloc(MAX * sizeof(struct Rock));
+	struct Object **rocks;
 
-	struct Rock **rockets;
-
-	rockets = malloc(MAX * sizeof(struct Rock));
+	rocks = malloc(MAX * sizeof(struct Object));
 
 	if (!rocks) {
 		printf("malloc error");
 		exit(1);
 	}
 
+	struct Object **rockets;
+
+	rockets = malloc(MAX * sizeof(struct Object));
+
 	if (!rockets) {
 		printf("malloc error");
 		exit(1);
 	}
-
-	rocks[0] = Rock_create(">");
 
 	setlocale(LC_ALL, "");
 
@@ -171,8 +65,8 @@ int main(int argc, char *argv[])
 	wrefresh(field);
 	wrefresh(score);
 
-	for (i = 1; i < MAX; i++) {
-		rocks[i] = Rock_create("#");
+	for (i = 0; i < MAX; i++) {
+		rocks[i] = Object_create("░", ROCK);
 		rocks[i]->x = rand() % max_x - 3;
 		rocks[i]->y = rand() % max_y - 3;
 	}
@@ -190,21 +84,45 @@ int main(int argc, char *argv[])
 
 		wclear(field);
 
-		Rock_move(rocks[0], max_x - 3, max_y - 3);
+		Object_move(ship, max_x - 3, max_y - 3);
 
 		if (rockets[0]) {
-			Rock_move(rockets[0], max_x - 3, max_y - 3);
+			Object_move(rockets[0], max_x - 3, max_y - 3);
 		}
 
-		for (i = 1; i < MAX; i++) {
-			Rock_move(rocks[i], max_x - 3, max_y - 3);
+		for (i = 0; i < MAX; i++) {
+			Object_move(rocks[i], max_x - 3, max_y - 3);
 
-			if (Rock_collide(rocks[0], rocks[i])) {
+			if (Object_collide(ship, rocks[i])) {
 				hits++;
 				mvwprintw(score, 0, 0, "hits: %d", hits);
 				wrefresh(score);
 			}
 		}
+
+		for (i = 0; i < MAX; i++) {
+			Object_move(rocks[i], max_x - 3, max_y - 3);
+
+			if (Object_collide(ship, rocks[i])) {
+				hits++;
+				mvwprintw(score, 0, 0, "hits: %d", hits);
+				wrefresh(score);
+			}
+		}
+
+		if (rockets[0]) {
+			for (i = 0; i < MAX; i++) {
+				if (Object_collide(rockets[0], rocks[i])) {
+					rocks[i]->direction_x = 0;
+					rocks[i]->direction_y = 0;
+					rocks[i]->x = -1;
+					rocks[i]->y = -1;
+					wrefresh(field);
+				}
+			}
+		}
+
+		mvwprintw(field, ship->y, ship->x, ship->ch);
 
 		for (i = 0; i < MAX; i++) {
 			mvwprintw(field, rocks[i]->y, rocks[i]->x, rocks[i]->ch);
@@ -214,7 +132,7 @@ int main(int argc, char *argv[])
 			mvwprintw(field, rockets[0]->y, rockets[0]->x, rockets[0]->ch);
 		}
 
-		Rock_input(rocks[0], rockets, ch);
+		Object_input(ship, rockets, ch);
 
 		wrefresh(field);
 	}
@@ -227,6 +145,20 @@ int main(int argc, char *argv[])
 		}
 
 		free(rocks);
+	}
+
+	if (rockets) {
+		for (i = 0; i < MAX; i++) {
+			if (rockets[i]) {
+				free(rockets[i]);
+			}
+		}
+
+		free(rockets);
+	}
+
+	if(ship) {
+		free(ship);
 	}
 
 	delwin(field);
