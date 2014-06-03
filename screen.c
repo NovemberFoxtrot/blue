@@ -25,6 +25,8 @@ struct Rock
 	int direction_x;
 	int direction_y;
 
+	int max_hits;
+
 	char *ch;
 };
 
@@ -45,6 +47,8 @@ struct Rock *Rock_create(char *ch)
 
 	r->direction_x = (rand() % 3) - 1;
 	r->direction_y = (rand() % 3) - 1;
+
+	r->max_hits = 0;
 
 	r->ch = ch;
 
@@ -69,8 +73,58 @@ void Rock_move(struct Rock *r, int max_x, int max_y)
 	}
 }
 
+int Rock_collide(const struct Rock *a, const struct Rock *b)
+{
+	if (a->x == b->x && a->y == b->y) {
+		return 1;
+	}
+
+	return 0;
+}
+
+void Rock_input(struct Rock *r, struct Rock **rockets, int ch)
+{
+	switch (ch) {
+	case KEY_LEFT:
+		r->direction_y = 0;
+		r->direction_x = -1;
+		r->ch = "<";
+		break;
+
+	case KEY_RIGHT:
+		r->direction_y = 0;
+		r->direction_x = 1;
+		r->ch = ">";
+		break;
+
+	case KEY_UP:
+		r->direction_y = -1;
+		r->direction_x = 0;
+		r->ch = "^";
+		break;
+
+	case KEY_DOWN:
+		r->direction_y = 1;
+		r->direction_x = 0;
+		r->ch = "v";
+		break;
+
+	case ' ':
+		if (!rockets[0]) {
+			rockets[0] = Rock_create("-");
+			rockets[0]->direction_x = r->direction_x * 2;
+			rockets[0]->direction_y = r->direction_y * 2;
+			rockets[0]->x = r->x;
+			rockets[0]->y = r->y;
+		}
+		break;
+	}
+}
+
 int main(int argc, char *argv[])
 {
+	srand((unsigned)time(NULL));
+
 	int i;
 
 	int max_y = 0;
@@ -80,7 +134,16 @@ int main(int argc, char *argv[])
 
 	rocks = malloc(MAX * sizeof(struct Rock));
 
+	struct Rock **rockets;
+
+	rockets = malloc(MAX * sizeof(struct Rock));
+
 	if (!rocks) {
+		printf("malloc error");
+		exit(1);
+	}
+
+	if (!rockets) {
 		printf("malloc error");
 		exit(1);
 	}
@@ -96,94 +159,64 @@ int main(int argc, char *argv[])
 	noecho();
 	keypad(stdscr, TRUE);
 
-	start_color();
-
-	use_default_colors();
-
-	init_color(NEW_COLOR, RED, GREEN, BLUE);
-
-	init_pair(0, COLOR_WHITE, COLOR_BLACK);
-	init_pair(1, NEW_COLOR, COLOR_BLACK);
-	init_pair(2, COLOR_BLACK, COLOR_BLACK);
-	init_pair(3, COLOR_RED, COLOR_BLACK);
-	init_pair(4, COLOR_GREEN, COLOR_BLACK);
-	init_pair(5, COLOR_BLUE, COLOR_BLACK);
-	init_pair(6, COLOR_YELLOW, COLOR_BLACK);
-	init_pair(7, COLOR_MAGENTA, COLOR_BLACK);
-	init_pair(8, COLOR_CYAN, COLOR_BLACK);
-
-	color_set(0, NULL);
-
-	assume_default_colors(COLOR_WHITE, COLOR_BLACK);
-
 	clear();
 
 	curs_set(0);
 
 	getmaxyx(stdscr, max_y, max_x);
 
+	WINDOW *field = newwin(max_y - 3, max_x, 0, 0);
+	WINDOW *score = newwin(3, max_x, max_y - 3, 0);
+
+	wrefresh(field);
+	wrefresh(score);
+
 	for (i = 1; i < MAX; i++) {
 		rocks[i] = Rock_create("#");
-		rocks[i]->x = rand() % max_x;
-		rocks[i]->y = rand() % max_y;
+		rocks[i]->x = rand() % max_x - 3;
+		rocks[i]->y = rand() % max_y - 3;
 	}
 
 	int ch = 0;
 
-	srand((unsigned)time(NULL));
-
-	refresh();
-
 	nodelay(stdscr, TRUE);
+
+	int hits = 0;
 
 	while (ch != 'q') {
 		ch = getch();
 
-		clear();
-
-		for (i = 0; i < MAX; i++) {
-			mvaddstr(rocks[i]->y, rocks[i]->x, rocks[i]->ch);
-		}
-
-		refresh();
-
 		napms(100);
 
-		if (ch == KEY_LEFT) {
-			rocks[0]->direction_y = 0;
-			rocks[0]->direction_x = -1;
-		}
+		wclear(field);
 
-		if (ch == KEY_RIGHT) {
-			rocks[0]->direction_y = 0;
-			rocks[0]->direction_x = 1;
-		}
+		Rock_move(rocks[0], max_x - 3, max_y - 3);
 
-		if (ch == KEY_UP) {
-			rocks[0]->direction_y = -1;
-			rocks[0]->direction_x = 0;
+		if (rockets[0]) {
+			Rock_move(rockets[0], max_x - 3, max_y - 3);
 		}
-
-		if (ch == KEY_DOWN) {
-			rocks[0]->direction_y = 1;
-			rocks[0]->direction_x = 0;
-		}
-
-		if (ch == ' ') {
-			rocks[0]->direction_y = 1;
-			rocks[0]->direction_x = 0;
-		}
-
-		Rock_move(rocks[0], max_x, max_y);
 
 		for (i = 1; i < MAX; i++) {
-			Rock_move(rocks[i], max_x, max_y);
+			Rock_move(rocks[i], max_x - 3, max_y - 3);
 
-			if (rocks[0]->x == rocks[i]->x && rocks[0]->y == rocks[i]->y) {
-				mvaddstr(0, 0, "Dude!");
-				napms(1000);
+			if (Rock_collide(rocks[0], rocks[i])) {
+				hits++;
+				mvwprintw(score, 0, 0, "hits: %d", hits);
+				wrefresh(score);
 			}
 		}
+
+		for (i = 0; i < MAX; i++) {
+			mvwprintw(field, rocks[i]->y, rocks[i]->x, rocks[i]->ch);
+		}
+
+		if(rockets[0]) {
+			mvwprintw(field, rockets[0]->y, rockets[0]->x, rockets[0]->ch);
+		}
+
+		Rock_input(rocks[0], rockets, ch);
+
+		wrefresh(field);
 	}
 
 	if (rocks) {
@@ -192,8 +225,12 @@ int main(int argc, char *argv[])
 				free(rocks[i]);
 			}
 		}
+
 		free(rocks);
 	}
+
+	delwin(field);
+	delwin(score);
 
 	endwin();
 }
