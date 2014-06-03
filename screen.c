@@ -125,11 +125,13 @@ int main(int argc, char *argv[])
 		mvwprintw(field, ship->y, ship->x, ship->ch);
 
 		for (i = 0; i < MAX; i++) {
-			mvwprintw(field, rocks[i]->y, rocks[i]->x, rocks[i]->ch);
+			mvwprintw(field, rocks[i]->y, rocks[i]->x,
+				  rocks[i]->ch);
 		}
 
-		if(rockets[0]) {
-			mvwprintw(field, rockets[0]->y, rockets[0]->x, rockets[0]->ch);
+		if (rockets[0]) {
+			mvwprintw(field, rockets[0]->y, rockets[0]->x,
+				  rockets[0]->ch);
 		}
 
 		Object_input(ship, rockets, ch);
@@ -157,7 +159,7 @@ int main(int argc, char *argv[])
 		free(rockets);
 	}
 
-	if(ship) {
+	if (ship) {
 		free(ship);
 	}
 

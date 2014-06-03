@@ -1,7 +1,7 @@
 #ifndef _object_h
 #define _object_h
 
-enum ObjectType {SHIP = 0, WEAPON, ROCK, ALIEN, PLANET};
+enum ObjectType { SHIP = 0, WEAPON, ROCK, ALIEN, PLANET };
 
 struct Object
 {
@@ -20,7 +20,6 @@ struct Object
 
 	char *ch;
 };
-
 
 struct Object *Object_create(char *ch, enum ObjectType type);
 void Object_move(struct Object *o, int max_x, int max_y);
