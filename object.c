@@ -7,6 +7,11 @@
 #include <stdint.h>
 #include "object.h"
 
+extern const char* ship_design = ""
+"  |\\ "
+"<:||)"
+"  |/ ";
+
 struct Object *Object_create(char *ch, enum ObjectType type)
 {
 	struct Object *o = malloc(sizeof(struct Object));
@@ -123,14 +128,19 @@ void Object_input(struct Object *o, struct Object **rockets, int ch)
 	case ' ':
 		for (int i = 0; i < MAXWEAPONS; i++) {
 			if (!rockets[i]) {
-				rockets[i] = Object_create("=", WEAPON);
-				rockets[i]->direction_x = o->direction_x * 2;
-				rockets[i]->direction_y = o->direction_y * 2;
-				rockets[i]->x = o->x;
+				rockets[i] = Object_create(">", WEAPON);
+				rockets[i]->direction_x = 2;
+				rockets[i]->direction_y = 0;
+				rockets[i]->x = o->x+3;
 				rockets[i]->y = o->y;
 				return;
 			}
 		}
 		break;
+
+	default:
+		o->direction_y = 0;
+		o->direction_x = 0;
+		o->ch = ">";
 	}
 }

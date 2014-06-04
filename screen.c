@@ -75,6 +75,8 @@ int main(int argc, char *argv[])
 	while (ch != 'q') {
 		ch = getch();
 
+		flushinp();
+
 		napms(DELAY);
 
 		wclear(field);
@@ -116,6 +118,11 @@ int main(int argc, char *argv[])
 		}
 
 		mvwprintw(field, ship->y, ship->x, ship->ch);
+
+		
+		mvwprintw(field, ship->y-1, ship->x, "  |\\ ");
+		mvwprintw(field, ship->y, ship->x,   "<:||)");
+		mvwprintw(field, ship->y+1, ship->x, "  |/");
 
 		for (i = 0; i < MAX; i++) {
 			mvwprintw(field, rocks[i]->y, rocks[i]->x, rocks[i]->ch);

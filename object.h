@@ -1,7 +1,7 @@
 #ifndef _object_h
 #define _object_h
 
-#define MAXWEAPONS 10
+#define MAXWEAPONS 100
 
 enum ObjectType { SHIP = 0, WEAPON, ROCK, ALIEN, PLANET };
 
