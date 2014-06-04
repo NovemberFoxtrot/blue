@@ -7,7 +7,7 @@
 #include <stdint.h>
 #include "object.h"
 
-extern const char* ship_design = ""
+const char* ship_design = ""
 "  |\\ "
 "<:||)"
 "  |/ ";

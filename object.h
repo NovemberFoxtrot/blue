@@ -18,6 +18,9 @@ struct Object
 	int direction_x;
 	int direction_y;
 
+	int dimension_x;
+	int dimension_y;
+
 	int hits;
 
 	char *ch;
