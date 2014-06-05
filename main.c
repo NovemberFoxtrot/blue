@@ -1,4 +1,3 @@
-#include <fcntl.h>
 #include <locale.h>
 #include <ncurses.h>
 #include <stdint.h>
@@ -10,6 +9,8 @@
 #define DELAY 50
 #define MAX 10
 #define MAXWEAPONS 100
+#define BLUE_SPACE_HEIGHT 10
+#define BLUE_SCORE_HEIGHT 3
 
 enum ObjectType { SHIP = 0, WEAPON, ROCK, ALIEN, PLANET };
 
@@ -76,13 +77,13 @@ void Object_move(struct Object *o, int max_x, int max_y)
 	o->next_x = o->x + o->direction_x;
 	o->next_y = o->y + o->direction_y;
 
-	if (o->next_x >= max_x || o->next_x < 0) {
+	if (o->next_x >= max_x || o->next_x < 2) {
 		o->direction_x *= -1;
 	} else {
 		o->x += o->direction_x;
 	}
 
-	if (o->next_y >= max_y || o->next_y < 0) {
+	if (o->next_y >= max_y || o->next_y < 2) {
 		o->direction_y *= -1;
 	} else {
 		o->y += o->direction_y;
@@ -209,23 +210,29 @@ void blue_array_destroy(struct Object **array)
 	}
 }
 
-void blue_game_print_ship() {}
+void blue_render_ship(WINDOW *field, struct Object *ship) {
+	mvwprintw(field, ship->y - 1, ship->x, "  |\\");
+	mvwprintw(field, ship->y, ship->x,     "<:||)");
+	mvwprintw(field, ship->y + 1, ship->x, "  |/");
+}
+
+
+void blue_render_rock(WINDOW *field, struct Object *rock) {
+	mvwprintw(field, rock->y, rock->x, rock->ch);
+}
 
 int main()
 {
+	int ch = 0;
+	int hits = 0;
 	int i;
 	int j;
-
-	int max_y = 0;
 	int max_x = 0;
+	int max_y = 0;
 
 	setlocale(LC_ALL, "");
 
 	srand((unsigned)time(NULL));
-
-	struct Object *ship = Object_create(">", SHIP);
-	struct Object **rocks = blue_array_create(MAX);
-	struct Object **rockets = blue_array_create(MAXWEAPONS);
 
 	initscr();
 	cbreak();
@@ -233,91 +240,78 @@ int main()
 	keypad(stdscr, TRUE);
 	curs_set(0);
 
-	int fd_flags = fcntl(0, F_GETFL);
-	fcntl(0, F_SETFL, (fd_flags | O_NONBLOCK));
-
 	getmaxyx(stdscr, max_y, max_x);
 
-	WINDOW *field = newwin(max_y - 3, max_x, 0, 0);
-	WINDOW *score = newwin(3, max_x, max_y - 3, 0);
+	WINDOW *field = newwin(BLUE_SPACE_HEIGHT, max_x, 0, 0);
+	WINDOW *score = newwin(BLUE_SCORE_HEIGHT, max_x, BLUE_SPACE_HEIGHT, 0);
 
-	mvwprintw(score, 0, 0, "hits: %d", 0);
-	wborder(score, 0, 0, 0, 0, 0, 0, 0, 0);
-
-	wrefresh(field);
-	wrefresh(score);
+	struct Object *ship = Object_create(">", SHIP);
+	struct Object **rocks = blue_array_create(MAX);
+	struct Object **rockets = blue_array_create(MAXWEAPONS);
 
 	for (i = 0; i < MAX; i++) {
 		rocks[i] = Object_create("░", ROCK);
-		rocks[i]->x = rand() % max_x - 3;
-		rocks[i]->y = rand() % max_y - 3;
+		rocks[i]->x = rand() % max_x;
+		rocks[i]->y = rand() % (BLUE_SPACE_HEIGHT - 2) + 1;
 	}
-
-	int ch = 0;
 
 	nodelay(stdscr, TRUE);
 
-	int hits = 0;
-
 	while (ch != 'q') {
+		napms(DELAY);
+
 		wrefresh(field);
 		wrefresh(score);
 
+		// INPUT
 		ch = getch();
 		flushinp();
+		Object_input(ship, rockets, ch);
 
-		napms(DELAY);
-
-		wclear(field);
-		wclear(score);
-
-		wborder(field, 1, 1, 0, 0, 1, 1, 1, 1);
-		wborder(score, 0, 0, 0, 0, 0, 0, 0, 0);
-
-		mvwprintw(score, 1, 1, "hits: %d", hits);
-
-		Object_move(ship, max_x - 3, max_y - 3);
+		// MOVE
+		Object_move(ship, max_x , BLUE_SPACE_HEIGHT - 2);
 
 		for (i = 0; i < MAX; i++) {
-			Object_move(rocks[i], max_x - 3, max_y - 3);
+			Object_move(rocks[i], max_x, BLUE_SPACE_HEIGHT - 2);
 
 			if (Object_collide(ship, rocks[i])) {
 				hits++;
 			}
 		}
 
+		// HIT
 		for (i = 0; i < MAXWEAPONS; i++) {
 			if (rockets[i]) {
 				for (j = 0; j < MAX; j++) {
-					if (Object_collide(rockets[i],
-							   rocks[j])) {
-						rocks[j]->direction_x = 0;
-						rocks[j]->direction_y = 0;
-						rocks[j]->x = -1;
-						rocks[j]->y = -1;
+					if (Object_collide(rockets[i], rocks[j])) {
+						rocks[j]->hits += 1;
 					}
 				}
 			}
 		}
 
-		mvwprintw(field, ship->y - 1, ship->x, "  |\\");
-		mvwprintw(field, ship->y, ship->x, "<:||)");
-		mvwprintw(field, ship->y + 1, ship->x, "  |/");
+		wborder(score, 0, 0, 0, 0, 0, 0, 0, 0);
+
+		// RENDER
+		wclear(field);
+
+		wborder(field, 1, 1, 0, 0, 1, 1, 1, 1);
+
+		mvwprintw(score, 1, 1, "hits: %d", hits);
+		mvwprintw(score, 1, 20, "ship: %d %d", ship->x, ship->y);
+
+		blue_render_ship(field, ship);
 
 		for (i = 0; i < MAX; i++) {
-			mvwprintw(field, rocks[i]->y, rocks[i]->x,
-				  rocks[i]->ch);
+			blue_render_rock(field, rocks[i]);
 		}
 
 		for (i = 0; i < MAXWEAPONS; i++) {
 			if (rockets[i]) {
-				Object_move(rockets[i], max_x - 3, max_y - 3);
-				mvwprintw(field, rockets[i]->y, rockets[i]->x,
-					  rockets[i]->ch);
+				Object_move(rockets[i], max_x, BLUE_SPACE_HEIGHT);
+				mvwprintw(field, rockets[i]->y, rockets[i]->x, rockets[i]->ch);
 			}
 		}
-
-		Object_input(ship, rockets, ch);
 	}
 
 	blue_array_clean(rocks, MAX);
