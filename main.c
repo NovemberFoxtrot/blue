@@ -1,14 +1,181 @@
-#include <stdlib.h>
-#include <stdint.h>
-#include <time.h>
-#include <ncurses.h>
-#include <locale.h>
 #include <fcntl.h>
-
-#include "object.h"
+#include <locale.h>
+#include <ncurses.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <unistd.h>
 
 #define DELAY 50
 #define MAX 10
+#define MAXWEAPONS 100
+
+enum ObjectType { SHIP = 0, WEAPON, ROCK, ALIEN, PLANET };
+
+struct Object
+{
+	enum ObjectType type;
+
+	int x;
+	int y;
+
+	int next_x;
+	int next_y;
+
+	int direction_x;
+	int direction_y;
+
+	int dimension_x;
+	int dimension_y;
+
+	int hits;
+
+	char *ch;
+};
+
+struct Object *Object_create(char *ch, enum ObjectType type);
+void Object_move(struct Object *o, int max_x, int max_y);
+int Object_collide(const struct Object *a, const struct Object *b);
+void Object_input(struct Object *o, struct Object **rockets, int ch);
+
+const char *ship_design = ""
+			  "  |\\ "
+			  "<:||)"
+			  "  |/ ";
+
+struct Object *Object_create(char *ch, enum ObjectType type)
+{
+	struct Object *o = malloc(sizeof(struct Object));
+
+	if (!o) {
+		printf("malloc error");
+		exit(1);
+	}
+
+	o->type = type;
+
+	o->x = rand() % 10;
+	o->y = rand() % 10;
+
+	o->next_x = 0;
+	o->next_y = 0;
+
+	o->direction_x = (rand() % 3) - 1;
+	o->direction_y = (rand() % 3) - 1;
+
+	o->hits = 0;
+
+	o->ch = ch;
+
+	return o;
+}
+
+void Object_move(struct Object *o, int max_x, int max_y)
+{
+	o->next_x = o->x + o->direction_x;
+	o->next_y = o->y + o->direction_y;
+
+	if (o->next_x >= max_x || o->next_x < 0) {
+		o->direction_x *= -1;
+	} else {
+		o->x += o->direction_x;
+	}
+
+	if (o->next_y >= max_y || o->next_y < 0) {
+		o->direction_y *= -1;
+	} else {
+		o->y += o->direction_y;
+	}
+}
+
+char get_line_intersection(float p0_x, float p0_y, float p1_x, float p1_y,
+			   float p2_x, float p2_y, float p3_x, float p3_y,
+			   float *i_x, float *i_y)
+{
+	float s1_x, s1_y, s2_x, s2_y;
+
+	s1_x = p1_x - p0_x;
+	s1_y = p1_y - p0_y;
+	s2_x = p3_x - p2_x;
+	s2_y = p3_y - p2_y;
+
+	float s, t;
+	s = (-s1_y * (p0_x - p2_x) + s1_x * (p0_y - p2_y)) /
+	    (-s2_x * s1_y + s1_x * s2_y);
+	t = (s2_x * (p0_y - p2_y) - s2_y * (p0_x - p2_x)) /
+	    (-s2_x * s1_y + s1_x * s2_y);
+
+	if (s >= 0 && s <= 1 && t >= 0 && t <= 1) {
+		if (i_x != NULL)
+			*i_x = p0_x + (t * s1_x);
+		if (i_y != NULL)
+			*i_y = p0_y + (t * s1_y);
+		return 1;
+	}
+
+	return 0;
+}
+
+int Object_collide(const struct Object *a, const struct Object *b)
+{
+	if (a->x == b->x && a->y == b->y) {
+		return 1;
+	}
+
+	float x, y;
+
+	return get_line_intersection(
+	    a->x, a->y, a->x + a->direction_x, a->y + a->direction_y, b->x,
+	    b->y, b->x + b->direction_x, b->y + b->direction_y, &x, &y);
+}
+
+void Object_input(struct Object *o, struct Object **rockets, int ch)
+{
+	switch (ch) {
+	case KEY_LEFT:
+		o->direction_y = 0;
+		o->direction_x = -1;
+		o->ch = "<";
+		break;
+
+	case KEY_RIGHT:
+		o->direction_y = 0;
+		o->direction_x = 1;
+		o->ch = ">";
+		break;
+
+	case KEY_UP:
+		o->direction_y = -1;
+		o->direction_x = 0;
+		o->ch = "^";
+		break;
+
+	case KEY_DOWN:
+		o->direction_y = 1;
+		o->direction_x = 0;
+		o->ch = "v";
+		break;
+
+	case ' ':
+		for (int i = 0; i < MAXWEAPONS; i++) {
+			if (!rockets[i]) {
+				rockets[i] = Object_create(">", WEAPON);
+				rockets[i]->direction_x = 2;
+				rockets[i]->direction_y = 0;
+				rockets[i]->x = o->x + 3;
+				rockets[i]->y = o->y;
+				return;
+			}
+		}
+		break;
+
+	default:
+		o->direction_y = 0;
+		o->direction_x = 0;
+		o->ch = ">";
+	}
+}
 
 struct Object **blue_array_create(uint32_t array_size)
 {
@@ -24,7 +191,8 @@ struct Object **blue_array_create(uint32_t array_size)
 	return array;
 }
 
-void blue_array_clean(struct Object **array, uint32_t array_size) {
+void blue_array_clean(struct Object **array, uint32_t array_size)
+{
 	if (array) {
 		for (uint32_t i = 0; i < array_size; i++) {
 			if (array[i]) {
@@ -34,14 +202,14 @@ void blue_array_clean(struct Object **array, uint32_t array_size) {
 	}
 }
 
-void blue_array_destroy(struct Object **array) {
+void blue_array_destroy(struct Object **array)
+{
 	if (array) {
 		free(array);
 	}
 }
 
-void blue_game_print_ship() {
-}
+void blue_game_print_ship() {}
 
 int main()
 {
@@ -66,7 +234,7 @@ int main()
 	curs_set(0);
 
 	int fd_flags = fcntl(0, F_GETFL);
-  fcntl(0, F_SETFL, (fd_flags|O_NONBLOCK));
+	fcntl(0, F_SETFL, (fd_flags | O_NONBLOCK));
 
 	getmaxyx(stdscr, max_y, max_x);
 
@@ -74,7 +242,7 @@ int main()
 	WINDOW *score = newwin(3, max_x, max_y - 3, 0);
 
 	mvwprintw(score, 0, 0, "hits: %d", 0);
-	wborder(score, 0,0,0,0,0,0,0,0);
+	wborder(score, 0, 0, 0, 0, 0, 0, 0, 0);
 
 	wrefresh(field);
 	wrefresh(score);
@@ -118,10 +286,11 @@ int main()
 			}
 		}
 
-		for (i = 0; i < MAXWEAPONS; i++ ) {
+		for (i = 0; i < MAXWEAPONS; i++) {
 			if (rockets[i]) {
 				for (j = 0; j < MAX; j++) {
-					if (Object_collide(rockets[i], rocks[j])) {
+					if (Object_collide(rockets[i],
+							   rocks[j])) {
 						rocks[j]->direction_x = 0;
 						rocks[j]->direction_y = 0;
 						rocks[j]->x = -1;
@@ -132,17 +301,19 @@ int main()
 		}
 
 		mvwprintw(field, ship->y - 1, ship->x, "  |\\");
-		mvwprintw(field, ship->y, ship->x,     "<:||)");
+		mvwprintw(field, ship->y, ship->x, "<:||)");
 		mvwprintw(field, ship->y + 1, ship->x, "  |/");
 
 		for (i = 0; i < MAX; i++) {
-			mvwprintw(field, rocks[i]->y, rocks[i]->x, rocks[i]->ch);
+			mvwprintw(field, rocks[i]->y, rocks[i]->x,
+				  rocks[i]->ch);
 		}
 
-		for (i = 0; i < MAXWEAPONS; i++ ) {
+		for (i = 0; i < MAXWEAPONS; i++) {
 			if (rockets[i]) {
 				Object_move(rockets[i], max_x - 3, max_y - 3);
-				mvwprintw(field, rockets[i]->y, rockets[i]->x, rockets[i]->ch);
+				mvwprintw(field, rockets[i]->y, rockets[i]->x,
+					  rockets[i]->ch);
 			}
 		}
 
