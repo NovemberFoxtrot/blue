@@ -5,6 +5,20 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include <fcntl.h>
+
+ #include <unistd.h>
+ #include <stdio.h>
+ #include <curses.h>
+ #include <locale.h>
+ #include <signal.h>
+ #include <string.h>
+ #include <getopt.h>
+ #include <math.h>
+ #include <sys/time.h>
+ #include <time.h>
+ #include <fcntl.h>
+
 
 #define DELAY 50
 #define MAX 10
@@ -134,25 +148,25 @@ int Object_collide(const struct Object *a, const struct Object *b)
 void Object_input(struct Object *o, struct Object **rockets, int ch)
 {
 	switch (ch) {
-	case KEY_LEFT:
+	case 68:
 		o->direction_y = 0;
 		o->direction_x = -1;
 		o->ch = "<";
 		break;
 
-	case KEY_RIGHT:
+	case 67:
 		o->direction_y = 0;
 		o->direction_x = 1;
 		o->ch = ">";
 		break;
 
-	case KEY_UP:
+	case 65:
 		o->direction_y = -1;
 		o->direction_x = 0;
 		o->ch = "^";
 		break;
 
-	case KEY_DOWN:
+	case 66:
 		o->direction_y = 1;
 		o->direction_x = 0;
 		o->ch = "v";
@@ -221,6 +235,26 @@ void blue_render_rock(WINDOW *field, struct Object *rock) {
 	mvwprintw(field, rock->y, rock->x, rock->ch);
 }
 
+int update_from_input()
+{
+	int c;
+	char buf[1];
+	int finished = 0;
+
+	while (fread(buf, 1, 1, stdin) == 1) {
+		c = buf[0];
+		finished = c;
+	}
+
+	return finished;
+}
+
+void on_timer(int signum)
+{
+	// time_to_redraw = 1;
+	// refresh();
+}
+
 int main()
 {
 	int ch = 0;
@@ -231,6 +265,25 @@ int main()
 	int max_y = 0;
 
 	setlocale(LC_ALL, "");
+
+	struct sigaction newhandler;      /* new settings         */
+	sigset_t blocked;		  /* set of blocked sigs  */
+	newhandler.sa_flags = SA_RESTART; /* options     */
+	sigemptyset(&blocked);		  /* clear all bits       */
+	newhandler.sa_mask = blocked;     /* store blockmask      */
+	newhandler.sa_handler = on_timer; /* handler function     */
+	if (sigaction(SIGALRM, &newhandler, NULL) == -1)
+		perror("sigaction");
+
+	int fd_flags = fcntl(0, F_GETFL);
+	fcntl(0, F_SETFL, (fd_flags | O_NONBLOCK));
+
+	struct itimerval it;
+	it.it_value.tv_sec = 0;
+	it.it_value.tv_usec = 10000;
+	it.it_interval.tv_sec = 0;
+	it.it_interval.tv_usec = 10000;
+	setitimer(ITIMER_REAL, &it, NULL);
 
 	srand((unsigned)time(NULL));
 
@@ -264,8 +317,9 @@ int main()
 		wrefresh(score);
 
 		// INPUT
-		ch = getch();
-		flushinp();
+		////ch = getch();
+		ch = update_from_input();
+		//flushinp();
 		Object_input(ship, rockets, ch);
 
 		// MOVE
@@ -273,18 +327,21 @@ int main()
 
 		for (i = 0; i < MAX; i++) {
 			Object_move(rocks[i], max_x, BLUE_SPACE_HEIGHT - 2);
+		}
 
+		// HIT
+		for (i = 0; i < MAX; i++) {
 			if (Object_collide(ship, rocks[i])) {
 				hits++;
 			}
 		}
 
-		// HIT
 		for (i = 0; i < MAXWEAPONS; i++) {
 			if (rockets[i]) {
 				for (j = 0; j < MAX; j++) {
 					if (Object_collide(rockets[i], rocks[j])) {
 						rocks[j]->hits += 1;
+						rocks[j]->ch = ".";
 					}
 				}
 			}
@@ -299,6 +356,7 @@ int main()
 
 		mvwprintw(score, 1, 1, "hits: %d", hits);
 		mvwprintw(score, 1, 20, "ship: %d %d", ship->x, ship->y);
+		mvwprintw(score, 1, 40, "key: %d", ch);
 
 		blue_render_ship(field, ship);
 
