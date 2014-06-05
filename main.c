@@ -1,24 +1,16 @@
+#include <curses.h>
+#include <fcntl.h>
 #include <locale.h>
+#include <math.h>
 #include <ncurses.h>
+#include <signal.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/time.h>
 #include <time.h>
 #include <unistd.h>
-#include <fcntl.h>
-
- #include <unistd.h>
- #include <stdio.h>
- #include <curses.h>
- #include <locale.h>
- #include <signal.h>
- #include <string.h>
- #include <getopt.h>
- #include <math.h>
- #include <sys/time.h>
- #include <time.h>
- #include <fcntl.h>
-
 
 #define DELAY 50
 #define MAX 10
@@ -91,16 +83,36 @@ void Object_move(struct Object *o, int max_x, int max_y)
 	o->next_x = o->x + o->direction_x;
 	o->next_y = o->y + o->direction_y;
 
-	if (o->next_x >= max_x || o->next_x < 2) {
-		o->direction_x *= -1;
-	} else {
-		o->x += o->direction_x;
-	}
+	if (o->type != WEAPON) {
+		if (o->next_x >= max_x || o->next_x < 2) {
+			o->direction_x *= -1;
+		} else {
+			o->x += o->direction_x;
+		}
 
-	if (o->next_y >= max_y || o->next_y < 2) {
-		o->direction_y *= -1;
+		if (o->next_y >= max_y || o->next_y < 2) {
+			o->direction_y *= -1;
+		} else {
+			o->y += o->direction_y;
+		}
 	} else {
-		o->y += o->direction_y;
+		if (o->next_x >= max_x || o->next_x < 2) {
+			o->x = -1;
+			o->y = -1;
+			o->direction_x = 0;
+			o->direction_y = 0;
+		} else {
+			o->x += o->direction_x;
+		}
+
+		if (o->next_y >= max_y || o->next_y < 2) {
+			o->x = -1;
+			o->y = -1;
+			o->direction_x = 0;
+			o->direction_y = 0;
+		} else {
+			o->y += o->direction_y;
+		}
 	}
 }
 
@@ -224,14 +236,15 @@ void blue_array_destroy(struct Object **array)
 	}
 }
 
-void blue_render_ship(WINDOW *field, struct Object *ship) {
+void blue_render_ship(WINDOW *field, struct Object *ship)
+{
 	mvwprintw(field, ship->y - 1, ship->x, "  |\\");
-	mvwprintw(field, ship->y, ship->x,     "<:||)");
+	mvwprintw(field, ship->y, ship->x, "<:||)");
 	mvwprintw(field, ship->y + 1, ship->x, "  |/");
 }
 
-
-void blue_render_rock(WINDOW *field, struct Object *rock) {
+void blue_render_rock(WINDOW *field, struct Object *rock)
+{
 	mvwprintw(field, rock->y, rock->x, rock->ch);
 }
 
@@ -319,11 +332,11 @@ int main()
 		// INPUT
 		////ch = getch();
 		ch = update_from_input();
-		//flushinp();
+		// flushinp();
 		Object_input(ship, rockets, ch);
 
 		// MOVE
-		Object_move(ship, max_x , BLUE_SPACE_HEIGHT - 2);
+		Object_move(ship, max_x, BLUE_SPACE_HEIGHT - 2);
 
 		for (i = 0; i < MAX; i++) {
 			Object_move(rocks[i], max_x, BLUE_SPACE_HEIGHT - 2);
@@ -339,9 +352,17 @@ int main()
 		for (i = 0; i < MAXWEAPONS; i++) {
 			if (rockets[i]) {
 				for (j = 0; j < MAX; j++) {
-					if (Object_collide(rockets[i], rocks[j])) {
-						rocks[j]->hits += 1;
-						rocks[j]->ch = ".";
+					if (Object_collide(rockets[i],
+							   rocks[j])) {
+						rockets[i]->x = -1;
+						rockets[i]->y = -1;
+						rockets[i]->direction_x = 0;
+						rockets[i]->direction_y = 0;
+
+						rocks[j]->x = -1;
+						rocks[j]->y = -1;
+						rocks[j]->direction_x = 0;
+						rocks[j]->direction_y = 0;
 					}
 				}
 			}
@@ -366,8 +387,10 @@ int main()
 
 		for (i = 0; i < MAXWEAPONS; i++) {
 			if (rockets[i]) {
-				Object_move(rockets[i], max_x, BLUE_SPACE_HEIGHT);
-				mvwprintw(field, rockets[i]->y, rockets[i]->x, rockets[i]->ch);
+				Object_move(rockets[i], max_x,
+					    BLUE_SPACE_HEIGHT);
+				mvwprintw(field, rockets[i]->y, rockets[i]->x,
+					  rockets[i]->ch);
 			}
 		}
 	}
