@@ -1,3 +1,11 @@
+/*
+        ====   =     =   =  ====
+  -/|   =   =  =     =   =  =
+<===::> ====   =     =   =  ====
+  -\|   =   =  =     =   =  =
+        ====   ====   ===   ====
+*/
+
 #include <curses.h>
 #include <fcntl.h>
 #include <linux/kd.h>
@@ -15,37 +23,11 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "blue.h"
+
 static struct termios tty_attr_old;
 static int old_keyboard_mode;
 static int time_to_redraw;
-
-#define DELAY 50
-#define MAX 10
-#define MAXWEAPONS 100
-#define BLUE_SPACE_HEIGHT 10
-#define BLUE_SCORE_HEIGHT 3
-
-enum blue_type { SHIP, WEAPON, ROCK, ALIEN, PLANET, BACKGROUND };
-
-struct blue_object {
-	enum blue_type type;
-
-	int x;
-	int y;
-
-	int next_x;
-	int next_y;
-
-	int direction_x;
-	int direction_y;
-
-	int dimension_x;
-	int dimension_y;
-
-	int hits;
-
-	char *ch;
-};
 
 int setup_keyboard()
 {
@@ -70,8 +52,8 @@ int setup_keyboard()
 	tty_attr.c_iflag &= ~(ISTRIP | INLCR | ICRNL | IGNCR | IXON | IXOFF);
 	tcsetattr(0, TCSANOW, &tty_attr);
 
-	ioctl(0, KDSKBMODE, K_RAW);
-	// ioctl(0, KDSKBMODE, K_MEDIUMRAW);
+	ioctl(0, KDSKBMODE, K_MEDIUMRAW);
+
 	return 1;
 }
 
@@ -162,7 +144,7 @@ void blue_object_move(struct blue_object *o, int max_x, int max_y)
 
 	case BACKGROUND:
 		if (o->next_x < 2) {
-			o->x = max_x*2;
+			o->x = max_x*5;
 		} else {
 			o->x += o->direction_x;
 		}
@@ -250,7 +232,7 @@ void blue_object_input(struct blue_object *o, struct blue_object **rockets, int 
 	case ' ':
 		for (int i = 0; i < MAXWEAPONS; i++) {
 			if (!rockets[i]) {
-				rockets[i] = blue_object_create(">", WEAPON);
+				rockets[i] = blue_object_create("~~~", WEAPON);
 				rockets[i]->direction_x = 2;
 				rockets[i]->direction_y = 0;
 				rockets[i]->x = o->x + 3;
@@ -355,9 +337,9 @@ int main()
 
 	struct itimerval it;
 	it.it_value.tv_sec = 0;
-	it.it_value.tv_usec = 50000;
+	it.it_value.tv_usec = 40000;
 	it.it_interval.tv_sec = 0;
-	it.it_interval.tv_usec = 50000;
+	it.it_interval.tv_usec = 40000;
 	setitimer(ITIMER_REAL, &it, NULL);
 
 	srand((unsigned)time(NULL));
@@ -377,17 +359,17 @@ int main()
 	struct blue_object **stars = blue_array_create(MAX);
 
 	for (i = 0; i < MAX; i++) {
-		rocks[i] = blue_object_create("*", ROCK);
-		rocks[i]->x = rand() % max_x;
+		rocks[i] = blue_object_create("*", BACKGROUND);
+		rocks[i]->x = rand() % (max_x * 5);
 		rocks[i]->y = rand() % (BLUE_SPACE_HEIGHT - 2) + 1;
-	}
+		rocks[i]->direction_x = ((rand() % 4) + 1) * -1;
+		rocks[i]->direction_y = 0;	
 
-	for (i = 0; i < MAX; i++) {
 		stars[i] = blue_object_create(".", BACKGROUND);
-		stars[i]->x = rand() % (max_x * 2);
+		stars[i]->x = rand() % (max_x * 5);
 		stars[i]->y = rand() % (BLUE_SPACE_HEIGHT - 2) + 1;
 		stars[i]->direction_x = ((rand() % 2) + 1) * -1;
-		stars[i]->direction_y = 0;	
+		stars[i]->direction_y = 0;
 	}
 
 	nodelay(stdscr, TRUE);
