@@ -63,32 +63,6 @@ void restore_keyboard()
 	ioctl(0, KDSKBMODE, old_keyboard_mode);
 }
 
-int read_keyboard()
-{
-	char buf[1];
-	int res;
-
-	/* read scan code from stdin */
-	res = read(0, &buf[0], 1);
-
-	/* keep reading til there's no more*/
-	while (res >= 0) {
-		switch (buf[0]) {
-		case 0x01:
-			/* escape was pressed */
-			exit(1);
-			break;
-		case 0x81:
-			/* escape was released */
-			break;
-			/* process more scan code possibilities here! */
-		}
-		res = read(0, &buf[0], 1);
-	}
-
-	return res;
-}
-
 struct blue_object *blue_object_create(char *ch, enum blue_type type)
 {
 	struct blue_object *o = malloc(sizeof(struct blue_object));

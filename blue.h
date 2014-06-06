@@ -33,7 +33,6 @@ struct blue_object {
 
 int setup_keyboard();
 void restore_keyboard();
-int read_keyboard();
 int update_from_input();
 
 struct blue_object *blue_object_create(char *ch, enum blue_type type);
