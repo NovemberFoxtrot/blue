@@ -429,6 +429,9 @@ int main()
 	blue_array_clean(rocks, MAX);
 	blue_array_destroy(rocks);
 
+	blue_array_clean(stars, MAX);
+	blue_array_destroy(stars);
+
 	blue_array_clean(rockets, MAX);
 	blue_array_destroy(rockets);
 
