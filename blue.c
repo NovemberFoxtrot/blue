@@ -25,7 +25,7 @@ static int time_to_redraw;
 #define BLUE_SPACE_HEIGHT 10
 #define BLUE_SCORE_HEIGHT 3
 
-enum blue_type { SHIP = 0, WEAPON, ROCK, ALIEN, PLANET };
+enum blue_type { SHIP, WEAPON, ROCK, ALIEN, PLANET, BACKGROUND };
 
 struct blue_object {
 	enum blue_type type;
@@ -139,7 +139,36 @@ void blue_object_move(struct blue_object *o, int max_x, int max_y)
 	o->next_x = o->x + o->direction_x;
 	o->next_y = o->y + o->direction_y;
 
-	if (o->type != WEAPON) {
+	switch (o->type) {
+	case WEAPON:
+		if (o->next_x >= max_x || o->next_x < 2) {
+			o->x = -1;
+			o->y = -1;
+			o->direction_x = 0;
+			o->direction_y = 0;
+		} else {
+			o->x += o->direction_x;
+		}
+
+		if (o->next_y >= max_y || o->next_y < 2) {
+			o->x = -1;
+			o->y = -1;
+			o->direction_x = 0;
+			o->direction_y = 0;
+		} else {
+			o->y += o->direction_y;
+		}
+		break;
+
+	case BACKGROUND:
+		if (o->next_x < 2) {
+			o->x = max_x*2;
+		} else {
+			o->x += o->direction_x;
+		}
+		break;
+
+	default:
 		if (o->next_x >= max_x || o->next_x < 2) {
 			o->direction_x *= -1;
 		} else {
@@ -148,24 +177,6 @@ void blue_object_move(struct blue_object *o, int max_x, int max_y)
 
 		if (o->next_y >= max_y || o->next_y < 2) {
 			o->direction_y *= -1;
-		} else {
-			o->y += o->direction_y;
-		}
-	} else {
-		if (o->next_x >= max_x || o->next_x < 2) {
-			o->x = -1;
-			o->y = -1;
-			o->direction_x = 0;
-			o->direction_y = 0;
-		} else {
-			o->x += o->direction_x;
-		}
-
-		if (o->next_y >= max_y || o->next_y < 2) {
-			o->x = -1;
-			o->y = -1;
-			o->direction_x = 0;
-			o->direction_y = 0;
 		} else {
 			o->y += o->direction_y;
 		}
@@ -336,8 +347,9 @@ int main()
 	sigemptyset(&blocked);		  /* clear all bits       */
 	newhandler.sa_mask = blocked;     /* store blockmask      */
 	newhandler.sa_handler = on_timer; /* handler function     */
-	if (sigaction(SIGALRM, &newhandler, NULL) == -1)
+	if (sigaction(SIGALRM, &newhandler, NULL) == -1) {
 		perror("sigaction");
+	}
 
 	setup_keyboard();
 
@@ -362,11 +374,20 @@ int main()
 	struct blue_object *ship = blue_object_create(">", SHIP);
 	struct blue_object **rocks = blue_array_create(MAX);
 	struct blue_object **rockets = blue_array_create(MAXWEAPONS);
+	struct blue_object **stars = blue_array_create(MAX);
 
 	for (i = 0; i < MAX; i++) {
-		rocks[i] = blue_object_create("░", ROCK);
+		rocks[i] = blue_object_create("*", ROCK);
 		rocks[i]->x = rand() % max_x;
 		rocks[i]->y = rand() % (BLUE_SPACE_HEIGHT - 2) + 1;
+	}
+
+	for (i = 0; i < MAX; i++) {
+		stars[i] = blue_object_create(".", BACKGROUND);
+		stars[i]->x = rand() % (max_x * 2);
+		stars[i]->y = rand() % (BLUE_SPACE_HEIGHT - 2) + 1;
+		stars[i]->direction_x = ((rand() % 2) + 1) * -1;
+		stars[i]->direction_y = 0;	
 	}
 
 	nodelay(stdscr, TRUE);
@@ -385,8 +406,8 @@ int main()
 			blue_object_move(ship, max_x, BLUE_SPACE_HEIGHT - 2);
 
 			for (i = 0; i < MAX; i++) {
-				blue_object_move(rocks[i], max_x,
-						 BLUE_SPACE_HEIGHT - 2);
+				blue_object_move(stars[i], max_x, BLUE_SPACE_HEIGHT - 2);
+				blue_object_move(rocks[i], max_x, BLUE_SPACE_HEIGHT - 2);
 			}
 
 			for (i = 0; i < MAXWEAPONS; i++) {
@@ -410,17 +431,13 @@ int main()
 							rockets[i], rocks[j])) {
 							rockets[i]->x = -1;
 							rockets[i]->y = -1;
-							rockets[i]
-							    ->direction_x = 0;
-							rockets[i]
-							    ->direction_y = 0;
+							rockets[i]->direction_x = 0;
+							rockets[i]->direction_y = 0;
 
 							rocks[j]->x = -1;
 							rocks[j]->y = -1;
-							rocks[j]->direction_x =
-							    0;
-							rocks[j]->direction_y =
-							    0;
+							rocks[j]->direction_x = 0;
+							rocks[j]->direction_y = 0;
 						}
 					}
 				}
@@ -439,9 +456,8 @@ int main()
 		mvwprintw(score, 1, 20, "ship: %d %d", ship->x, ship->y);
 		mvwprintw(score, 1, 40, "key: %#08x", ch);
 
-		blue_render_ship(field, ship);
-
 		for (i = 0; i < MAX; i++) {
+			blue_render_rock(field, stars[i]);
 			blue_render_rock(field, rocks[i]);
 		}
 
@@ -450,6 +466,8 @@ int main()
 				mvwprintw(field, rockets[i]->y, rockets[i]->x, rockets[i]->ch);
 			}
 		}
+
+		blue_render_ship(field, ship);
 	}
 
 	blue_array_clean(rocks, MAX);
