@@ -1,5 +1,6 @@
 #include <curses.h>
 #include <fcntl.h>
+#include <linux/kd.h>
 #include <locale.h>
 #include <math.h>
 #include <ncurses.h>
@@ -8,9 +9,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/ioctl.h>
 #include <sys/time.h>
+#include <termios.h>
 #include <time.h>
 #include <unistd.h>
+
+static struct termios tty_attr_old;
+static int old_keyboard_mode;
+static int time_to_redraw;
 
 #define DELAY 50
 #define MAX 10
@@ -39,6 +46,66 @@ struct blue_object {
 
 	char *ch;
 };
+
+int setup_keyboard()
+{
+	struct termios tty_attr;
+	int flags;
+
+	/* make stdin non-blocking */
+	flags = fcntl(0, F_GETFL);
+	flags |= O_NONBLOCK;
+	fcntl(0, F_SETFL, flags);
+
+	/* save old keyboard mode */
+	if (ioctl(0, KDGKBMODE, &old_keyboard_mode) < 0) {
+		return 0;
+	}
+
+	tcgetattr(0, &tty_attr_old);
+
+	/* turn off buffering, echo and key processing */
+	tty_attr = tty_attr_old;
+	tty_attr.c_lflag &= ~(ICANON | ECHO | ISIG);
+	tty_attr.c_iflag &= ~(ISTRIP | INLCR | ICRNL | IGNCR | IXON | IXOFF);
+	tcsetattr(0, TCSANOW, &tty_attr);
+
+	ioctl(0, KDSKBMODE, K_RAW);
+	// ioctl(0, KDSKBMODE, K_MEDIUMRAW);
+	return 1;
+}
+
+void restore_keyboard()
+{
+	tcsetattr(0, TCSAFLUSH, &tty_attr_old);
+	ioctl(0, KDSKBMODE, old_keyboard_mode);
+}
+
+int read_keyboard()
+{
+	char buf[1];
+	int res;
+
+	/* read scan code from stdin */
+	res = read(0, &buf[0], 1);
+
+	/* keep reading til there's no more*/
+	while (res >= 0) {
+		switch (buf[0]) {
+		case 0x01:
+			/* escape was pressed */
+			exit(1);
+			break;
+		case 0x81:
+			/* escape was released */
+			break;
+			/* process more scan code possibilities here! */
+		}
+		res = read(0, &buf[0], 1);
+	}
+
+	return res;
+}
 
 struct blue_object *blue_object_create(char *ch, enum blue_type type)
 {
@@ -235,22 +302,19 @@ void blue_render_rock(WINDOW *field, struct blue_object *rock)
 
 int update_from_input()
 {
-	int c;
+	int c = 0;
 	char buf[1];
-	int finished = 0;
 
 	while (fread(buf, 1, 1, stdin) == 1) {
 		c = buf[0];
-		finished = c;
 	}
 
-	return finished;
+	return c;
 }
 
 void on_timer(int signum)
 {
-	// time_to_redraw = 1;
-	// refresh();
+	time_to_redraw = 1;
 }
 
 int main()
@@ -261,6 +325,8 @@ int main()
 	int j;
 	int max_x = 0;
 	int max_y = 0;
+
+	time_to_redraw = 0;
 
 	setlocale(LC_ALL, "");
 
@@ -273,22 +339,19 @@ int main()
 	if (sigaction(SIGALRM, &newhandler, NULL) == -1)
 		perror("sigaction");
 
-	int fd_flags = fcntl(0, F_GETFL);
-	fcntl(0, F_SETFL, (fd_flags | O_NONBLOCK));
+	setup_keyboard();
 
 	struct itimerval it;
 	it.it_value.tv_sec = 0;
-	it.it_value.tv_usec = 10000;
+	it.it_value.tv_usec = 50000;
 	it.it_interval.tv_sec = 0;
-	it.it_interval.tv_usec = 10000;
+	it.it_interval.tv_usec = 50000;
 	setitimer(ITIMER_REAL, &it, NULL);
 
 	srand((unsigned)time(NULL));
 
 	initscr();
-	cbreak();
-	noecho();
-	keypad(stdscr, TRUE);
+
 	curs_set(0);
 
 	getmaxyx(stdscr, max_y, max_x);
@@ -309,52 +372,59 @@ int main()
 	nodelay(stdscr, TRUE);
 
 	while (ch != 'q') {
-		napms(DELAY);
+		if (time_to_redraw) {
+			wrefresh(field);
+			wrefresh(score);
 
-		wrefresh(field);
-		wrefresh(score);
+			// INPUT
+			ch = update_from_input();
 
-		// INPUT
-		////ch = getch();
-		ch = update_from_input();
-		// flushinp();
-		blue_object_input(ship, rockets, ch);
+			blue_object_input(ship, rockets, ch);
 
-		// MOVE
-		blue_object_move(ship, max_x, BLUE_SPACE_HEIGHT - 2);
+			// MOVE
+			blue_object_move(ship, max_x, BLUE_SPACE_HEIGHT - 2);
 
-		for (i = 0; i < MAX; i++) {
-			blue_object_move(rocks[i], max_x, BLUE_SPACE_HEIGHT - 2);
-		}
-
-		for (i = 0; i < MAXWEAPONS; i++) {
-			if (rockets[i]) {
-				blue_object_move(rockets[i], max_x, BLUE_SPACE_HEIGHT);
+			for (i = 0; i < MAX; i++) {
+				blue_object_move(rocks[i], max_x,
+						 BLUE_SPACE_HEIGHT - 2);
 			}
-		}
 
-		// HIT
-		for (i = 0; i < MAX; i++) {
-			if (blue_object_collide(ship, rocks[i])) {
-				hits++;
+			for (i = 0; i < MAXWEAPONS; i++) {
+				if (rockets[i]) {
+					blue_object_move(rockets[i], max_x,
+							 BLUE_SPACE_HEIGHT);
+				}
 			}
-		}
 
-		for (i = 0; i < MAXWEAPONS; i++) {
-			if (rockets[i]) {
-				for (j = 0; j < MAX; j++) {
-					if (blue_object_collide(rockets[i], rocks[j])) {
-						rockets[i]->x = -1;
-						rockets[i]->y = -1;
-						rockets[i]->direction_x = 0;
-						rockets[i]->direction_y = 0;
+			// HIT
+			for (i = 0; i < MAX; i++) {
+				if (blue_object_collide(ship, rocks[i])) {
+					hits++;
+				}
+			}
 
-						rocks[j]->x = -1;
-						rocks[j]->y = -1;
-						rocks[j]->direction_x = 0;
-						rocks[j]->direction_y = 0;
+			for (i = 0; i < MAXWEAPONS; i++) {
+				if (rockets[i]) {
+					for (j = 0; j < MAX; j++) {
+						if (blue_object_collide(
+							rockets[i], rocks[j])) {
+							rockets[i]->x = -1;
+							rockets[i]->y = -1;
+							rockets[i]
+							    ->direction_x = 0;
+							rockets[i]
+							    ->direction_y = 0;
+
+							rocks[j]->x = -1;
+							rocks[j]->y = -1;
+							rocks[j]->direction_x =
+							    0;
+							rocks[j]->direction_y =
+							    0;
+						}
 					}
 				}
+				time_to_redraw = 0;
 			}
 		}
 
@@ -367,7 +437,7 @@ int main()
 
 		mvwprintw(score, 1, 1, "hits: %d", hits);
 		mvwprintw(score, 1, 20, "ship: %d %d", ship->x, ship->y);
-		mvwprintw(score, 1, 40, "key: %d", ch);
+		mvwprintw(score, 1, 40, "key: %#08x", ch);
 
 		blue_render_ship(field, ship);
 
@@ -396,4 +466,6 @@ int main()
 	delwin(score);
 
 	endwin();
+
+	// restore_keyboard();
 }
