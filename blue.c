@@ -118,7 +118,7 @@ void blue_object_move(struct blue_object *o, int max_x, int max_y)
 
 	case BACKGROUND:
 		if (o->next_x < 2) {
-			o->x = max_x*5;
+			o->x = max_x;
 			o->y = (rand() % (max_y - 2)) + 1;
 		} else {
 			o->x += o->direction_x;
@@ -341,7 +341,7 @@ int main()
 		rocks[i]->direction_y = 0;	
 
 		stars[i] = blue_object_create(".", BACKGROUND);
-		stars[i]->x = rand() % (max_x * 5);
+		stars[i]->x = rand() % max_x;
 		stars[i]->y = rand() % (BLUE_SPACE_HEIGHT - 2) + 1;
 		stars[i]->direction_x = ((rand() % 2) + 1) * -1;
 		stars[i]->direction_y = 0;
