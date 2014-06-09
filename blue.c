@@ -444,6 +444,4 @@ int main()
 	delwin(score);
 
 	endwin();
-
-	// restore_keyboard();
 }
