@@ -34,12 +34,10 @@ int setup_keyboard()
 	struct termios tty_attr;
 	int flags;
 
-	/* make stdin non-blocking */
 	flags = fcntl(0, F_GETFL);
 	flags |= O_NONBLOCK;
 	fcntl(0, F_SETFL, flags);
 
-	/* save old keyboard mode */
 	if (ioctl(0, KDGKBMODE, &old_keyboard_mode) < 0) {
 		return 0;
 	}
