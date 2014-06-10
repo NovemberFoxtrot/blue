@@ -55,12 +55,6 @@ int setup_keyboard()
 	return 1;
 }
 
-void restore_keyboard()
-{
-	tcsetattr(0, TCSAFLUSH, &tty_attr_old);
-	ioctl(0, KDSKBMODE, old_keyboard_mode);
-}
-
 struct blue_object *blue_object_create(char *ch, enum blue_type type)
 {
 	struct blue_object *o = malloc(sizeof(struct blue_object));
