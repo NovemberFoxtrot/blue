@@ -6,7 +6,7 @@ SOURCE=blue.c
 blue: blue.o
 	$(CC) $(CFLAGS) $(SOURCE) -o $(TARGET) $(LDFLAGS)
 
-blue.o:blue.c
+blue.o:blue.c blue.h
 
 clean:
 	rm -rf *.o
