@@ -2,7 +2,7 @@
 #define blue_h
 
 #define DELAY 50
-#define MAX 200
+#define MAX 20
 #define MAXWEAPONS 100
 #define BLUE_SPACE_HEIGHT 30
 #define BLUE_SCORE_HEIGHT 3
