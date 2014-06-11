@@ -3,12 +3,13 @@
 
 #define DELAY 50
 #define MAX 20
-#define MAXWEAPONS 100
-#define BLUE_SPACE_HEIGHT 30
+#define BLUE_SPACE_HEIGHT 11
 #define BLUE_SCORE_HEIGHT 3
 
 enum blue_type { SHIP, WEAPON, ROCK, ALIEN, PLANET, BACKGROUND };
 enum blue_status { ACTIVE, INACTIVE, EXPLODE, DESTROYED };
+
+typedef void (*movement_handler)(int max_x, int max_y);
 
 struct blue_object {
 	enum blue_type type;
@@ -27,6 +28,8 @@ struct blue_object {
 	int dimension_y;
 
 	int hits;
+
+	movement_handler movement;	
 
 	char *ch;
 };

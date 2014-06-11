@@ -82,6 +82,19 @@ struct blue_object *blue_object_create(char *ch, enum blue_type type)
 	return o;
 }
 
+void blue_object_background_movement_handler(struct blue_object *o, int max_x, int max_y)
+{
+	o->next_x = o->x + o->direction_x;
+	o->next_y = o->y + o->direction_y;
+
+	if (o->next_x < 2) {
+		o->x = max_x;
+		o->y = (rand() % (max_y - 2)) + 1;
+	} else {
+		o->x += o->direction_x;
+	}
+}
+
 void blue_object_move(struct blue_object *o, int max_x, int max_y)
 {
 	o->next_x = o->x + o->direction_x;
@@ -132,9 +145,7 @@ void blue_object_move(struct blue_object *o, int max_x, int max_y)
 	}
 }
 
-char get_line_intersection(float p0_x, float p0_y, float p1_x, float p1_y,
-			   float p2_x, float p2_y, float p3_x, float p3_y,
-			   float *i_x, float *i_y)
+char get_line_intersection(float p0_x, float p0_y, float p1_x, float p1_y, float p2_x, float p2_y, float p3_x, float p3_y, float *i_x, float *i_y)
 {
 	float s1_x, s1_y, s2_x, s2_y;
 
@@ -144,16 +155,17 @@ char get_line_intersection(float p0_x, float p0_y, float p1_x, float p1_y,
 	s2_y = p3_y - p2_y;
 
 	float s, t;
-	s = (-s1_y * (p0_x - p2_x) + s1_x * (p0_y - p2_y)) /
-	    (-s2_x * s1_y + s1_x * s2_y);
-	t = (s2_x * (p0_y - p2_y) - s2_y * (p0_x - p2_x)) /
-	    (-s2_x * s1_y + s1_x * s2_y);
+	s = (-s1_y * (p0_x - p2_x) + s1_x * (p0_y - p2_y)) / (-s2_x * s1_y + s1_x * s2_y);
+	t = (s2_x * (p0_y - p2_y) - s2_y * (p0_x - p2_x)) / (-s2_x * s1_y + s1_x * s2_y);
 
 	if (s >= 0 && s <= 1 && t >= 0 && t <= 1) {
-		if (i_x != NULL)
+		if (i_x != NULL) {
 			*i_x = p0_x + (t * s1_x);
-		if (i_y != NULL)
+		}
+		if (i_y != NULL) {
 			*i_y = p0_y + (t * s1_y);
+		}
+
 		return 1;
 	}
 
@@ -197,7 +209,7 @@ void blue_object_input(struct blue_object *o, struct blue_object **rockets, int 
 		break;
 
 	case ' ':
-		for (int i = 0; i < MAXWEAPONS; i++) {
+		for (int i = 0; i < MAX; i++) {
 			if (!rockets[i]) {
 				rockets[i] = blue_object_create("~~~", WEAPON);
 				rockets[i]->direction_x = 2;
@@ -322,7 +334,7 @@ int main()
 
 	struct blue_object *ship = blue_object_create(">", SHIP);
 	struct blue_object **rocks = blue_array_create(MAX);
-	struct blue_object **rockets = blue_array_create(MAXWEAPONS);
+	struct blue_object **rockets = blue_array_create(MAX);
 	struct blue_object **stars = blue_array_create(MAX);
 
 	for (i = 0; i < MAX; i++) {
@@ -359,7 +371,7 @@ int main()
 				blue_object_move(rocks[i], max_x, BLUE_SPACE_HEIGHT - 2);
 			}
 
-			for (i = 0; i < MAXWEAPONS; i++) {
+			for (i = 0; i < MAX; i++) {
 				if (rockets[i]) {
 					blue_object_move(rockets[i], max_x,
 							 BLUE_SPACE_HEIGHT);
@@ -373,7 +385,7 @@ int main()
 				}
 			}
 
-			for (i = 0; i < MAXWEAPONS; i++) {
+			for (i = 0; i < MAX; i++) {
 				if (rockets[i]) {
 					for (j = 0; j < MAX; j++) {
 						if (blue_object_collide(
@@ -410,7 +422,7 @@ int main()
 			blue_render_rock(field, rocks[i]);
 		}
 
-		for (i = 0; i < MAXWEAPONS; i++) {
+		for (i = 0; i < MAX; i++) {
 			if (rockets[i]) {
 				mvwprintw(field, rockets[i]->y, rockets[i]->x, rockets[i]->ch);
 			}
