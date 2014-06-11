@@ -1,9 +1,9 @@
 /*
-        ====   =     =   =  ====
-  -/|   =   =  =     =   =  =
-<===::> ====   =     =   =  ====
-  -\|   =   =  =     =   =  =
-        ====   ====   ===   ====
+*         ====   =     =   =  ====
+*   -/|   =   =  =     =   =  =
+* <===::> ====   =     =   =  ====
+*   -\|   =   =  =     =   =  =
+*         ====   ====   ===   ====
 */
 
 #include <curses.h>
@@ -325,11 +325,11 @@ int main()
 	struct blue_object **rockets = blue_array_create(MAXWEAPONS);
 	struct blue_object **stars = blue_array_create(MAX);
 
-	for (i = 0; i < MAX; i++) {
+	for (i = 0; i < MAX / 4; i++) {
 		rocks[i] = blue_object_create("*", BACKGROUND);
-		rocks[i]->x = rand() % (max_x * 10);
+		rocks[i]->x = rand() % max_x;
 		rocks[i]->y = rand() % (BLUE_SPACE_HEIGHT - 2) + 1;
-		rocks[i]->direction_x = ((rand() % 4) + 2) * -1;
+		rocks[i]->direction_x = ((rand() % 4) + 3) * -1;
 		rocks[i]->direction_y = 0;	
 
 		stars[i] = blue_object_create(".", BACKGROUND);
@@ -376,8 +376,7 @@ int main()
 			for (i = 0; i < MAXWEAPONS; i++) {
 				if (rockets[i]) {
 					for (j = 0; j < MAX; j++) {
-						if (blue_object_collide(
-							rockets[i], rocks[j])) {
+						if (blue_object_collide(rockets[i], rocks[j])) {
 							rockets[i]->x = -1;
 							rockets[i]->y = -1;
 							rockets[i]->direction_x = 0;
@@ -396,7 +395,7 @@ int main()
 
 		wborder(score, 0, 0, 0, 0, 0, 0, 0, 0);
 
-		// RENDER
+		/* RENDER */
 		wclear(field);
 
 		wborder(field, 1, 1, 0, 0, 1, 1, 1, 1);
@@ -419,6 +418,8 @@ int main()
 		blue_render_ship(field, ship);
 	}
 
+	/* Clean Objects */
+
 	blue_array_clean(rocks, MAX);
 	blue_array_destroy(rocks);
 
@@ -431,6 +432,8 @@ int main()
 	if (ship) {
 		free(ship);
 	}
+
+	/* Clean Screen */
 
 	delwin(field);
 	delwin(score);
