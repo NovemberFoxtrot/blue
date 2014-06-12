@@ -2,7 +2,7 @@
 #define blue_h
 
 #define DELAY 50
-#define MAX 50
+#define MAX 100
 #define BLUE_SPACE_HEIGHT 11
 #define BLUE_SCORE_HEIGHT 3
 
@@ -15,7 +15,9 @@ typedef void (*movement_handler)(int max_x, int max_y);
 struct blue_game_state {
 	WINDOW *field;
 	WINDOW *score;
+
 	enum blue_game_status status;
+
 	int max_x;
 	int max_y;
 	int ch;
@@ -52,6 +54,7 @@ struct blue_game_state *blue_game_state_create(void);
 void blue_game_init(struct blue_game_state *game_state);
 void blue_object_background_movement_handler(struct blue_object *o, int max_x, int max_y);
 struct blue_object *blue_object_create(char *ch, enum blue_type type);
+struct blue_object **blue_game_create_objects(struct blue_game_state *game_state);
 void blue_object_move(struct blue_object *o, int max_x, int max_y);
 char get_line_intersection(float p0_x, float p0_y, float p1_x, float p1_y, float p2_x, float p2_y, float p3_x, float p3_y, float *i_x, float *i_y);
 int blue_object_collide(const struct blue_object *a, const struct blue_object *b);

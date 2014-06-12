@@ -29,6 +29,32 @@ static struct termios tty_attr_old;
 static int old_keyboard_mode;
 static int time_to_redraw;
 
+int setup_keyboard()
+{
+	struct termios tty_attr;
+	int flags;
+
+	flags = fcntl(0, F_GETFL);
+	flags |= O_NONBLOCK;
+	fcntl(0, F_SETFL, flags);
+
+	if (ioctl(0, KDGKBMODE, &old_keyboard_mode) < 0) {
+		return 0;
+	}
+
+	tcgetattr(0, &tty_attr_old);
+
+	/* turn off buffering, echo and key processing */
+	tty_attr = tty_attr_old;
+	tty_attr.c_lflag &= ~(ICANON | ECHO | ISIG);
+	tty_attr.c_iflag &= ~(ISTRIP | INLCR | ICRNL | IGNCR | IXON | IXOFF);
+	tcsetattr(0, TCSANOW, &tty_attr);
+
+	ioctl(0, KDSKBMODE, K_MEDIUMRAW);
+
+	return 1;
+}
+
 struct blue_object *blue_object_create(char *ch, enum blue_type type)
 {
 	struct blue_object *o = malloc(sizeof(struct blue_object));
@@ -244,6 +270,12 @@ void blue_render_ship(WINDOW *field, struct blue_object *ship)
 
 void blue_render_rock(WINDOW *field, struct blue_object *rock)
 {
+	if(rock->direction_x == 0 || rock->direction_x == 1 || rock->direction_x == -1) {
+		rock->ch = ".";
+	} else {
+		rock->ch = "*";
+	}
+
 	mvwprintw(field, rock->y, rock->x, rock->ch);
 }
 
@@ -320,6 +352,22 @@ void blue_game_init(struct blue_game_state *game_state) {
 	nodelay(stdscr, TRUE);
 }
 
+struct blue_object **blue_game_create_objects(struct blue_game_state *game_state) {
+	struct blue_object **objects = blue_array_create(MAX);
+
+	objects[0] = blue_object_create(">", SHIP);
+
+	for (int i = 1; i < MAX; i++) {
+		objects[i] = blue_object_create(".", BACKGROUND);
+		objects[i]->x = rand() % game_state->max_x;
+		objects[i]->y = rand() % (BLUE_SPACE_HEIGHT - 2) + 1;
+		objects[i]->direction_x = ((rand() % 5) + 1) * -1;
+		objects[i]->direction_y = 0;	
+	}
+
+	return objects;
+}
+
 int main()
 {
 	int i;
@@ -328,22 +376,10 @@ int main()
 
 	blue_game_init(game_state);
 
-	struct blue_object **objects = blue_array_create(MAX);
-
-	objects[0] = blue_object_create(">", SHIP);
-
+	struct blue_object **objects = blue_game_create_objects(game_state);
 	struct blue_object *ship = objects[0];
 
-	for (i = 1; i < MAX; i++) {
-		objects[i] = blue_object_create(".", BACKGROUND);
-		objects[i]->x = rand() % game_state->max_x;
-		objects[i]->y = rand() % (BLUE_SPACE_HEIGHT - 2) + 1;
-		objects[i]->direction_x = ((rand() % 5) + 1) * -1;
-		objects[i]->direction_y = 0;	
-	}
-
-
-	while (game_state->ch != 'q') {
+	while (game_state->status == RUN) {
 		if (time_to_redraw) {
 			wrefresh(game_state->field);
 			wrefresh(game_state->score);
@@ -351,17 +387,19 @@ int main()
 			// INPUT
 			game_state->ch = update_from_input();
 
-			blue_object_input(ship, objects, game_state->ch);
-
-			// MOVE
-			for (i = 0; i < MAX; i++) {
-				blue_object_move(objects[i], game_state->max_x, BLUE_SPACE_HEIGHT - 2);
+			if(game_state->ch == 'q') {
+				game_state->status = STOP;
 			}
 
-			// HIT
-			for (i = 1; i < MAX; i++) {
-				if (blue_object_collide(ship, objects[i])) {
-					ship->hits++;
+			blue_object_input(ship, objects, game_state->ch);
+
+			for (i = 0; i < MAX; i++) {
+				if(objects[i]) {
+					blue_object_move(objects[i], game_state->max_x, BLUE_SPACE_HEIGHT - 2);
+
+					if (blue_object_collide(ship,	objects[i])) {
+						ship->hits++;
+					}
 				}
 			}
 
@@ -403,28 +441,3 @@ int main()
 	endwin();
 }
 
-int setup_keyboard()
-{
-	struct termios tty_attr;
-	int flags;
-
-	flags = fcntl(0, F_GETFL);
-	flags |= O_NONBLOCK;
-	fcntl(0, F_SETFL, flags);
-
-	if (ioctl(0, KDGKBMODE, &old_keyboard_mode) < 0) {
-		return 0;
-	}
-
-	tcgetattr(0, &tty_attr_old);
-
-	/* turn off buffering, echo and key processing */
-	tty_attr = tty_attr_old;
-	tty_attr.c_lflag &= ~(ICANON | ECHO | ISIG);
-	tty_attr.c_iflag &= ~(ISTRIP | INLCR | ICRNL | IGNCR | IXON | IXOFF);
-	tcsetattr(0, TCSANOW, &tty_attr);
-
-	ioctl(0, KDSKBMODE, K_MEDIUMRAW);
-
-	return 1;
-}
