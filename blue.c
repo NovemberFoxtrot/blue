@@ -99,6 +99,7 @@ void blue_object_move(struct blue_object *o, int max_x, int max_y)
 		if (o->next_x < 2) {
 			o->x = max_x;
 			o->y = (rand() % (max_y - 2)) + 1;
+			o->ch = rand() % 3 == 0 ? "." : "*";
 		} else {
 			o->x += o->direction_x;
 		}
@@ -261,6 +262,8 @@ int update_from_input()
 void on_timer(int signum)
 {
 	time_to_redraw = 1;
+
+	printf("%d", signum);
 }
 
 struct blue_game_state *blue_game_state_create() {
@@ -273,6 +276,10 @@ struct blue_game_state *blue_game_state_create() {
 		exit(1);
 	}
 
+	return game_state;
+}
+
+void blue_game_init(struct blue_game_state *game_state) {
 	game_state->ch = 0;
 	game_state->status = RUN;
 
@@ -282,22 +289,6 @@ struct blue_game_state *blue_game_state_create() {
 	
 	game_state->field = newwin(BLUE_SPACE_HEIGHT, game_state->max_x, 0, 0);
 	game_state->score = newwin(BLUE_SCORE_HEIGHT, game_state->max_x, BLUE_SPACE_HEIGHT, 0);
-
-	return game_state;
-}
-
-int main()
-{
-	int x;
-	int y;
-
-	struct blue_game_state *game_state = blue_game_state_create();
-
-	printf("%d\n", game_state->max_x);
-
-	int i;
-	int j;
-	int hits = 0;
 
 	time_to_redraw = 0;
 
@@ -324,29 +315,33 @@ int main()
 
 	srand((unsigned)time(NULL));
 
-
 	curs_set(0);
 
-	struct blue_object *ship = blue_object_create(">", SHIP);
-	struct blue_object **rocks = blue_array_create(MAX);
-	struct blue_object **rockets = blue_array_create(MAX);
-	struct blue_object **stars = blue_array_create(MAX);
+	nodelay(stdscr, TRUE);
+}
 
-	for (i = 0; i < MAX; i++) {
-		rocks[i] = blue_object_create("*", BACKGROUND);
-		rocks[i]->x = rand() % (game_state->max_x * 10);
-		rocks[i]->y = rand() % (BLUE_SPACE_HEIGHT - 2) + 1;
-		rocks[i]->direction_x = ((rand() % 4) + 2) * -1;
-		rocks[i]->direction_y = 0;	
+int main()
+{
+	int i;
 
-		stars[i] = blue_object_create(".", BACKGROUND);
-		stars[i]->x = rand() % game_state->max_x;
-		stars[i]->y = rand() % (BLUE_SPACE_HEIGHT - 2) + 1;
-		stars[i]->direction_x = ((rand() % 2) + 1) * -1;
-		stars[i]->direction_y = 0;
+	struct blue_game_state *game_state = blue_game_state_create();
+
+	blue_game_init(game_state);
+
+	struct blue_object **objects = blue_array_create(MAX);
+
+	objects[0] = blue_object_create(">", SHIP);
+
+	struct blue_object *ship = objects[0];
+
+	for (i = 1; i < MAX; i++) {
+		objects[i] = blue_object_create(".", BACKGROUND);
+		objects[i]->x = rand() % game_state->max_x;
+		objects[i]->y = rand() % (BLUE_SPACE_HEIGHT - 2) + 1;
+		objects[i]->direction_x = ((rand() % 5) + 1) * -1;
+		objects[i]->direction_y = 0;	
 	}
 
-	nodelay(stdscr, TRUE);
 
 	while (game_state->ch != 'q') {
 		if (time_to_redraw) {
@@ -356,49 +351,21 @@ int main()
 			// INPUT
 			game_state->ch = update_from_input();
 
-			blue_object_input(ship, rockets, game_state->ch);
+			blue_object_input(ship, objects, game_state->ch);
 
 			// MOVE
-			blue_object_move(ship, game_state->max_x, BLUE_SPACE_HEIGHT - 2);
-
 			for (i = 0; i < MAX; i++) {
-				blue_object_move(stars[i], game_state->max_x, BLUE_SPACE_HEIGHT - 2);
-				blue_object_move(rocks[i], game_state->max_x, BLUE_SPACE_HEIGHT - 2);
-			}
-
-			for (i = 0; i < MAX; i++) {
-				if (rockets[i]) {
-					blue_object_move(rockets[i], game_state->max_x,
-							 BLUE_SPACE_HEIGHT);
-				}
+				blue_object_move(objects[i], game_state->max_x, BLUE_SPACE_HEIGHT - 2);
 			}
 
 			// HIT
-			for (i = 0; i < MAX; i++) {
-				if (blue_object_collide(ship, rocks[i])) {
-					hits++;
+			for (i = 1; i < MAX; i++) {
+				if (blue_object_collide(ship, objects[i])) {
+					ship->hits++;
 				}
 			}
 
-			for (i = 0; i < MAX; i++) {
-				if (rockets[i]) {
-					for (j = 0; j < MAX; j++) {
-						if (blue_object_collide(
-							rockets[i], rocks[j])) {
-							rockets[i]->x = -1;
-							rockets[i]->y = -1;
-							rockets[i]->direction_x = 0;
-							rockets[i]->direction_y = 0;
-
-							rocks[j]->x = -1;
-							rocks[j]->y = -1;
-							rocks[j]->direction_x = 0;
-							rocks[j]->direction_y = 0;
-						}
-					}
-				}
-				time_to_redraw = 0;
-			}
+			time_to_redraw = 0;
 		}
 
 		wborder(game_state->score, 0, 0, 0, 0, 0, 0, 0, 0);
@@ -408,32 +375,19 @@ int main()
 
 		wborder(game_state->field, 1, 1, 0, 0, 1, 1, 1, 1);
 
-		mvwprintw(game_state->score, 1, 1, "hits: %d", hits);
+		mvwprintw(game_state->score, 1, 1, "hits: %d", ship->hits);
 		mvwprintw(game_state->score, 1, 20, "ship: %d %d", ship->x, ship->y);
 		mvwprintw(game_state->score, 1, 40, "key: %#08x", game_state->ch);
 
-		for (i = 0; i < MAX; i++) {
-			blue_render_rock(game_state->field, stars[i]);
-			blue_render_rock(game_state->field, rocks[i]);
-		}
-
-		for (i = 0; i < MAX; i++) {
-			if (rockets[i]) {
-				mvwprintw(game_state->field, rockets[i]->y, rockets[i]->x, rockets[i]->ch);
-			}
+		for (i = 1; i < MAX; i++) {
+			blue_render_rock(game_state->field, objects[i]);
 		}
 
 		blue_render_ship(game_state->field, ship);
 	}
 
-	blue_array_clean(rocks, MAX);
-	blue_array_destroy(rocks);
-
-	blue_array_clean(stars, MAX);
-	blue_array_destroy(stars);
-
-	blue_array_clean(rockets, MAX);
-	blue_array_destroy(rockets);
+	blue_array_clean(objects, MAX);
+	blue_array_destroy(objects);
 
 	if (ship) {
 		free(ship);

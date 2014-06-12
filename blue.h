@@ -2,7 +2,7 @@
 #define blue_h
 
 #define DELAY 50
-#define MAX 20
+#define MAX 50
 #define BLUE_SPACE_HEIGHT 11
 #define BLUE_SCORE_HEIGHT 3
 
@@ -49,6 +49,7 @@ void restore_keyboard(void);
 int update_from_input(void);
 
 struct blue_game_state *blue_game_state_create(void);
+void blue_game_init(struct blue_game_state *game_state);
 void blue_object_background_movement_handler(struct blue_object *o, int max_x, int max_y);
 struct blue_object *blue_object_create(char *ch, enum blue_type type);
 void blue_object_move(struct blue_object *o, int max_x, int max_y);
