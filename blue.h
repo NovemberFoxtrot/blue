@@ -7,13 +7,23 @@
 #define BLUE_SCORE_HEIGHT 3
 
 enum blue_type { SHIP, WEAPON, ROCK, ALIEN, PLANET, BACKGROUND };
-enum blue_status { ACTIVE, INACTIVE, EXPLODE, DESTROYED };
+enum blue_object_status { ACTIVE, INACTIVE, EXPLODE, DESTROYED };
+enum blue_game_status { RUN, STOP };
 
 typedef void (*movement_handler)(int max_x, int max_y);
 
+struct blue_game_state {
+	WINDOW *field;
+	WINDOW *score;
+	enum blue_game_status status;
+	int max_x;
+	int max_y;
+	int ch;
+};
+
 struct blue_object {
 	enum blue_type type;
-	enum blue_status status;
+	enum blue_object_status status;
 
 	int x;
 	int y;
@@ -34,10 +44,12 @@ struct blue_object {
 	char *ch;
 };
 
-int setup_keyboard();
-void restore_keyboard();
-int update_from_input();
+int setup_keyboard(void);
+void restore_keyboard(void);
+int update_from_input(void);
 
+struct blue_game_state *blue_game_state_create(void);
+void blue_object_background_movement_handler(struct blue_object *o, int max_x, int max_y);
 struct blue_object *blue_object_create(char *ch, enum blue_type type);
 void blue_object_move(struct blue_object *o, int max_x, int max_y);
 char get_line_intersection(float p0_x, float p0_y, float p1_x, float p1_y, float p2_x, float p2_y, float p3_x, float p3_y, float *i_x, float *i_y);
@@ -48,6 +60,7 @@ void blue_array_clean(struct blue_object **array, uint32_t array_size);
 void blue_array_destroy(struct blue_object **array);
 void blue_render_ship(WINDOW *field, struct blue_object *ship);
 void blue_render_rock(WINDOW *field, struct blue_object *rock);
+
 void on_timer(int signum);
 
 #endif
