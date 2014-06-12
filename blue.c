@@ -270,7 +270,7 @@ void blue_render_ship(WINDOW *field, struct blue_object *ship)
 
 void blue_render_rock(WINDOW *field, struct blue_object *rock)
 {
-	if(rock->direction_x == 0 || rock->direction_x == 1 || rock->direction_x == -1) {
+	if(rock->direction_x >= -4) {
 		rock->ch = ".";
 	} else {
 		rock->ch = "*";
@@ -387,14 +387,14 @@ int main()
 			// INPUT
 			game_state->ch = update_from_input();
 
-			if(game_state->ch == 'q') {
+			if (game_state->ch == 'q') {
 				game_state->status = STOP;
 			}
 
 			blue_object_input(ship, objects, game_state->ch);
 
 			for (i = 0; i < MAX; i++) {
-				if(objects[i]) {
+				if (objects[i]) {
 					blue_object_move(objects[i], game_state->max_x, BLUE_SPACE_HEIGHT - 2);
 
 					if (blue_object_collide(ship,	objects[i])) {
@@ -403,22 +403,22 @@ int main()
 				}
 			}
 
+			wborder(game_state->score, 0, 0, 0, 0, 0, 0, 0, 0);
+
+			// RENDER
+			wclear(game_state->field);
+
+			wborder(game_state->field, 1, 1, 0, 0, 1, 1, 1, 1);
+
+			mvwprintw(game_state->score, 1, 1, "hits: %d", ship->hits);
+			mvwprintw(game_state->score, 1, 20, "ship: %d %d", ship->x, ship->y);
+			mvwprintw(game_state->score, 1, 40, "key: %#08x", game_state->ch);
+
+			for (i = 1; i < MAX; i++) {
+				blue_render_rock(game_state->field, objects[i]);
+			}
+
 			time_to_redraw = 0;
-		}
-
-		wborder(game_state->score, 0, 0, 0, 0, 0, 0, 0, 0);
-
-		// RENDER
-		wclear(game_state->field);
-
-		wborder(game_state->field, 1, 1, 0, 0, 1, 1, 1, 1);
-
-		mvwprintw(game_state->score, 1, 1, "hits: %d", ship->hits);
-		mvwprintw(game_state->score, 1, 20, "ship: %d %d", ship->x, ship->y);
-		mvwprintw(game_state->score, 1, 40, "key: %#08x", game_state->ch);
-
-		for (i = 1; i < MAX; i++) {
-			blue_render_rock(game_state->field, objects[i]);
 		}
 
 		blue_render_ship(game_state->field, ship);
