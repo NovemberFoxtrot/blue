@@ -124,8 +124,9 @@ void blue_object_move(struct blue_object *o, int max_x, int max_y)
 	case BACKGROUND:
 		if (o->next_x < 2) {
 			o->x = max_x;
-			o->y = (rand() % (max_y - 2)) + 1;
-			o->ch = rand() % 3 == 0 ? "." : "*";
+			o->y = (rand() % (BLUE_SPACE_HEIGHT - 2)) + 1;
+			o->direction_x = ((rand() % 6) + 1) * -1;
+			o->ch = o->direction_x < -2 ? "*" : ".";
 		} else {
 			o->x += o->direction_x;
 		}
@@ -181,9 +182,7 @@ int blue_object_collide(const struct blue_object *a, const struct blue_object *b
 
 	float x, y;
 
-	return get_line_intersection(
-	    a->x, a->y, a->x + a->direction_x, a->y + a->direction_y, b->x,
-	    b->y, b->x + b->direction_x, b->y + b->direction_y, &x, &y);
+	return get_line_intersection(a->x, a->y, a->x + a->direction_x, a->y + a->direction_y, b->x, b->y, b->x + b->direction_x, b->y + b->direction_y, &x, &y);
 }
 
 void blue_object_input(struct blue_object *o, struct blue_object **rockets, int ch)
@@ -210,7 +209,7 @@ void blue_object_input(struct blue_object *o, struct blue_object **rockets, int 
 		break;
 
 	case ' ':
-		for (int i = 0; i < MAX; i++) {
+		for (int i = MAX; i < (MAX*2); i++) {
 			if (!rockets[i]) {
 				rockets[i] = blue_object_create("~~~", WEAPON);
 				rockets[i]->direction_x = 2;
@@ -353,7 +352,7 @@ void blue_game_init(struct blue_game_state *game_state) {
 }
 
 struct blue_object **blue_game_create_objects(struct blue_game_state *game_state) {
-	struct blue_object **objects = blue_array_create(MAX);
+	struct blue_object **objects = blue_array_create(MAX*2);
 
 	objects[0] = blue_object_create(">", SHIP);
 	objects[0]->x = game_state->max_x / 4;
@@ -362,7 +361,7 @@ struct blue_object **blue_game_create_objects(struct blue_game_state *game_state
 	for (int i = 1; i < MAX; i++) {
 		objects[i] = blue_object_create(".", BACKGROUND);
 		objects[i]->x = rand() % game_state->max_x;
-		objects[i]->y = rand() % (BLUE_SPACE_HEIGHT - 2) + 1;
+		objects[i]->y = (rand() % (BLUE_SPACE_HEIGHT - 2)) + 1;
 		objects[i]->direction_x = ((rand() % 5) + 1) * -1;
 		objects[i]->direction_y = 0;	
 	}
@@ -385,12 +384,13 @@ void blue_game_run(struct blue_game_state *game_state, struct blue_object **obje
 
 			blue_object_input(objects[0], objects, game_state->ch);
 
+			// MOVE
 			for (int i = 0; i < MAX; i++) {
 				if (objects[i]) {
 					blue_object_move(objects[i], game_state->max_x, BLUE_SPACE_HEIGHT - 2);
 
-					if (blue_object_collide(objects[0],	objects[i])) {
-						objects[0]->hits++;
+					if (objects[i]->type != BACKGROUND && blue_object_collide(objects[0], objects[i])) {
+					 	objects[0]->hits++;
 					}
 				}
 			}
