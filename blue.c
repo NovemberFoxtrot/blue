@@ -232,7 +232,7 @@ struct blue_object **blue_array_create(uint32_t array_size)
 {
 	struct blue_object **array;
 
-	array = malloc(array_size * sizeof(struct blue_object));
+	array = calloc(array_size, sizeof(struct blue_object));
 
 	if (!array) {
 		printf("malloc error");
@@ -269,10 +269,12 @@ void blue_render_ship(WINDOW *field, struct blue_object *ship)
 
 void blue_render_rock(WINDOW *field, struct blue_object *rock)
 {
-	if(rock->direction_x >= -4) {
-		rock->ch = ".";
-	} else {
-		rock->ch = "*";
+	if (rock->type == BACKGROUND) {
+		if (rock->direction_x >= -4) {
+			rock->ch = ".";
+		} else {
+			rock->ch = "*";
+		}
 	}
 
 	mvwprintw(field, rock->y, rock->x, rock->ch);
@@ -385,7 +387,7 @@ void blue_game_run(struct blue_game_state *game_state, struct blue_object **obje
 			blue_object_input(objects[0], objects, game_state->ch);
 
 			// MOVE
-			for (int i = 0; i < MAX; i++) {
+			for (int i = 0; i < MAX*2; i++) {
 				if (objects[i]) {
 					blue_object_move(objects[i], game_state->max_x, BLUE_SPACE_HEIGHT - 2);
 
@@ -406,8 +408,10 @@ void blue_game_run(struct blue_game_state *game_state, struct blue_object **obje
 			mvwprintw(game_state->score, 1, 20, "ship: %d %d", objects[0]->x, objects[0]->y);
 			mvwprintw(game_state->score, 1, 40, "key: %#08x", game_state->ch);
 
-			for (int i = 1; i < MAX; i++) {
-				blue_render_rock(game_state->field, objects[i]);
+			for (int i = 1; i < MAX*2; i++) {
+				if(objects[i]) {
+					blue_render_rock(game_state->field, objects[i]);
+				}
 			}
 
 			time_to_redraw = 0;
@@ -430,12 +434,12 @@ int main()
 	blue_array_clean(objects, MAX);
 	blue_array_destroy(objects);
 
+	delwin(game_state->field);
+	delwin(game_state->score);
+
 	if(game_state) {
 		free(game_state);
 	}
-
-	delwin(game_state->field);
-	delwin(game_state->score);
 
 	endwin();
 }
