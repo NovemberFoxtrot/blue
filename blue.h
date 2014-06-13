@@ -10,8 +10,6 @@ enum blue_type { SHIP, WEAPON, ROCK, ALIEN, PLANET, BACKGROUND };
 enum blue_object_status { ACTIVE, INACTIVE, EXPLODE, DESTROYED };
 enum blue_game_status { RUN, STOP };
 
-typedef void (*movement_handler)(int max_x, int max_y);
-
 struct blue_game_state {
 	WINDOW *field;
 	WINDOW *score;
@@ -22,6 +20,11 @@ struct blue_game_state {
 	int max_y;
 	int ch;
 };
+
+struct blue_object;
+
+typedef void (*movement_handler)(struct blue_object *o, struct blue_game_state *game_state);
+typedef void (*render_handler)(struct blue_object *o, struct blue_game_state *game_state);
 
 struct blue_object {
 	enum blue_type type;
@@ -42,10 +45,15 @@ struct blue_object {
 	int hits;
 
 	movement_handler movement;	
+	render_handler render;	
 
 	char *ch;
 };
 
+
+void blue_render_handler_laser(struct blue_object *o, struct blue_game_state *game_state);
+void blue_render_handler_ship(struct blue_object *o, struct blue_game_state *game_state);
+void blue_render_handler_rock(struct blue_object *o, struct blue_game_state *game_state);
 char get_line_intersection(float p0_x, float p0_y, float p1_x, float p1_y, float p2_x, float p2_y, float p3_x, float p3_y, float *i_x, float *i_y);
 int blue_object_collide(const struct blue_object *a, const struct blue_object *b);
 int setup_keyboard(void);

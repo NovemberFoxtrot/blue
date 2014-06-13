@@ -260,24 +260,27 @@ void blue_array_destroy(struct blue_object **array)
 	}
 }
 
-void blue_render_ship(WINDOW *field, struct blue_object *ship)
+void blue_render_handler_laser(struct blue_object *o, struct blue_game_state *game_state)
 {
-	mvwprintw(field, ship->y - 1, ship->x, "  |\\");
-	mvwprintw(field, ship->y, ship->x, "<:||)");
-	mvwprintw(field, ship->y + 1, ship->x, "  |/");
+	mvwprintw(game_state->field, o->y, o->x, o->ch);
 }
 
-void blue_render_rock(WINDOW *field, struct blue_object *rock)
+void blue_render_handler_ship(struct blue_object *o, struct blue_game_state *game_state)
 {
-	if (rock->type == BACKGROUND) {
-		if (rock->direction_x >= -4) {
-			rock->ch = ".";
-		} else {
-			rock->ch = "*";
-		}
+	mvwprintw(game_state->field, o->y - 1, o->x, "  |\\");
+	mvwprintw(game_state->field, o->y, o->x, "<:||)");
+	mvwprintw(game_state->field, o->y + 1, o->x, "  |/");
+}
+
+void blue_render_handler_rock(struct blue_object *o, struct blue_game_state *game_state)
+{
+	if (o->direction_x >= -4) {
+		o->ch = ".";
+	} else {
+		o->ch = "*";
 	}
 
-	mvwprintw(field, rock->y, rock->x, rock->ch);
+	mvwprintw(game_state->field, o->y, o->x, o->ch);
 }
 
 int update_from_input()
@@ -354,11 +357,12 @@ void blue_game_init(struct blue_game_state *game_state) {
 }
 
 struct blue_object **blue_game_create_objects(struct blue_game_state *game_state) {
-	struct blue_object **objects = blue_array_create(MAX*2);
+	struct blue_object **objects = blue_array_create(MAX*3);
 
 	objects[0] = blue_object_create(">", SHIP);
 	objects[0]->x = game_state->max_x / 4;
 	objects[0]->y = BLUE_SPACE_HEIGHT / 2;
+	objects[0]->render = blue_render_handler_ship;
 
 	for (int i = 1; i < MAX; i++) {
 		objects[i] = blue_object_create(".", BACKGROUND);
@@ -366,6 +370,7 @@ struct blue_object **blue_game_create_objects(struct blue_game_state *game_state
 		objects[i]->y = (rand() % (BLUE_SPACE_HEIGHT - 2)) + 1;
 		objects[i]->direction_x = ((rand() % 5) + 1) * -1;
 		objects[i]->direction_y = 0;	
+		objects[i]->render = blue_render_handler_rock;	
 	}
 
 	return objects;
@@ -373,10 +378,10 @@ struct blue_object **blue_game_create_objects(struct blue_game_state *game_state
 
 void blue_game_run(struct blue_game_state *game_state, struct blue_object **objects) {
 	while (game_state->status == RUN) {
-		if (time_to_redraw) {
-			wrefresh(game_state->field);
-			wrefresh(game_state->score);
+		wrefresh(game_state->field);
+		wrefresh(game_state->score);
 
+		if (time_to_redraw) {
 			// INPUT
 			game_state->ch = update_from_input();
 
@@ -408,16 +413,16 @@ void blue_game_run(struct blue_game_state *game_state, struct blue_object **obje
 			mvwprintw(game_state->score, 1, 20, "ship: %d %d", objects[0]->x, objects[0]->y);
 			mvwprintw(game_state->score, 1, 40, "key: %#08x", game_state->ch);
 
-			for (int i = 1; i < MAX*2; i++) {
+			for (int i = 0; i < MAX*2; i++) {
 				if(objects[i]) {
-					blue_render_rock(game_state->field, objects[i]);
+					objects[i]->render(objects[i], game_state);
 				}
 			}
 
+			objects[0]->render(objects[0], game_state);
+
 			time_to_redraw = 0;
 		}
-
-		blue_render_ship(game_state->field, objects[0]);
 	}
 }
 
