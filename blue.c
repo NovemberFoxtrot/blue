@@ -368,17 +368,7 @@ struct blue_object **blue_game_create_objects(struct blue_game_state *game_state
 	return objects;
 }
 
-int main()
-{
-	int i;
-
-	struct blue_game_state *game_state = blue_game_state_create();
-
-	blue_game_init(game_state);
-
-	struct blue_object **objects = blue_game_create_objects(game_state);
-	struct blue_object *ship = objects[0];
-
+void blue_game_run(struct blue_game_state *game_state, struct blue_object **objects) {
 	while (game_state->status == RUN) {
 		if (time_to_redraw) {
 			wrefresh(game_state->field);
@@ -391,14 +381,14 @@ int main()
 				game_state->status = STOP;
 			}
 
-			blue_object_input(ship, objects, game_state->ch);
+			blue_object_input(objects[0], objects, game_state->ch);
 
-			for (i = 0; i < MAX; i++) {
+			for (int i = 0; i < MAX; i++) {
 				if (objects[i]) {
 					blue_object_move(objects[i], game_state->max_x, BLUE_SPACE_HEIGHT - 2);
 
-					if (blue_object_collide(ship,	objects[i])) {
-						ship->hits++;
+					if (blue_object_collide(objects[0],	objects[i])) {
+						objects[0]->hits++;
 					}
 				}
 			}
@@ -410,26 +400,33 @@ int main()
 
 			wborder(game_state->field, 1, 1, 0, 0, 1, 1, 1, 1);
 
-			mvwprintw(game_state->score, 1, 1, "hits: %d", ship->hits);
-			mvwprintw(game_state->score, 1, 20, "ship: %d %d", ship->x, ship->y);
+			mvwprintw(game_state->score, 1, 1, "hits: %d", objects[0]->hits);
+			mvwprintw(game_state->score, 1, 20, "ship: %d %d", objects[0]->x, objects[0]->y);
 			mvwprintw(game_state->score, 1, 40, "key: %#08x", game_state->ch);
 
-			for (i = 1; i < MAX; i++) {
+			for (int i = 1; i < MAX; i++) {
 				blue_render_rock(game_state->field, objects[i]);
 			}
 
 			time_to_redraw = 0;
 		}
 
-		blue_render_ship(game_state->field, ship);
+		blue_render_ship(game_state->field, objects[0]);
 	}
+}
+
+int main()
+{
+	struct blue_game_state *game_state = blue_game_state_create();
+
+	blue_game_init(game_state);
+
+	struct blue_object **objects = blue_game_create_objects(game_state);
+
+	blue_game_run(game_state, objects);
 
 	blue_array_clean(objects, MAX);
 	blue_array_destroy(objects);
-
-	if (ship) {
-		free(ship);
-	}
 
 	if(game_state) {
 		free(game_state);

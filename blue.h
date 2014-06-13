@@ -50,6 +50,7 @@ int setup_keyboard(void);
 void restore_keyboard(void);
 int update_from_input(void);
 
+void blue_game_run(struct blue_game_state *game_state, struct blue_object **objects);
 struct blue_game_state *blue_game_state_create(void);
 void blue_game_init(struct blue_game_state *game_state);
 void blue_object_background_movement_handler(struct blue_object *o, int max_x, int max_y);
