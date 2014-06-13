@@ -439,4 +439,3 @@ int main()
 
 	endwin();
 }
-
