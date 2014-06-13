@@ -356,6 +356,8 @@ struct blue_object **blue_game_create_objects(struct blue_game_state *game_state
 	struct blue_object **objects = blue_array_create(MAX);
 
 	objects[0] = blue_object_create(">", SHIP);
+	objects[0]->x = game_state->max_x / 4;
+	objects[0]->y = BLUE_SPACE_HEIGHT / 2;
 
 	for (int i = 1; i < MAX; i++) {
 		objects[i] = blue_object_create(".", BACKGROUND);
