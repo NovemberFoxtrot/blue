@@ -56,7 +56,7 @@ void blue_render_handler_ship(struct blue_object *o, struct blue_game_state *gam
 void blue_render_handler_rock(struct blue_object *o, struct blue_game_state *game_state);
 char get_line_intersection(float p0_x, float p0_y, float p1_x, float p1_y, float p2_x, float p2_y, float p3_x, float p3_y, float *i_x, float *i_y);
 int blue_object_collide(const struct blue_object *a, const struct blue_object *b);
-int setup_keyboard(void);
+int blue_game_setup_keyboard(void);
 int update_from_input(void);
 struct blue_game_state *blue_game_state_create(void);
 struct blue_object **blue_array_create(uint32_t array_size);

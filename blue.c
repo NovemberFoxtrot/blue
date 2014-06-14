@@ -340,7 +340,7 @@ void blue_game_init(struct blue_game_state *game_state) {
 		perror("sigaction");
 	}
 
-	setup_keyboard();
+	blue_game_setup_keyboard();
 
 	struct itimerval it;
 	it.it_value.tv_sec = 0;
