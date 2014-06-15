@@ -29,7 +29,7 @@ static struct termios tty_attr_old;
 static int old_keyboard_mode;
 static int time_to_redraw;
 
-int setup_keyboard()
+int blue_game_setup_keyboard()
 {
 	struct termios tty_attr;
 	int flags;
