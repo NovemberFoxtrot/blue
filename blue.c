@@ -164,6 +164,7 @@ char get_line_intersection(float p0_x, float p0_y, float p1_x, float p1_y, float
 		if (i_x != NULL) {
 			*i_x = p0_x + (t * s1_x);
 		}
+
 		if (i_y != NULL) {
 			*i_y = p0_y + (t * s1_y);
 		}
@@ -216,6 +217,7 @@ void blue_object_input(struct blue_object *o, struct blue_object **rockets, int 
 				rockets[i]->direction_y = 0;
 				rockets[i]->x = o->x + 3;
 				rockets[i]->y = o->y;
+				rockets[i]->render = blue_render_handler_laser;
 				return;
 			}
 		}
