@@ -211,13 +211,11 @@ void blue_object_input(struct blue_object *o, struct blue_object **rockets, int 
 
 	case ' ':
 		for (int i = MAX; i < (MAX*2); i++) {
-			if (!rockets[i]) {
-				rockets[i] = blue_object_create("~~~", WEAPON);
-				rockets[i]->direction_x = 2;
-				rockets[i]->direction_y = 0;
+			if (rockets[i]->x == -1 && rockets[i]->y == -1) {
 				rockets[i]->x = o->x + 3;
 				rockets[i]->y = o->y;
-				rockets[i]->render = blue_render_handler_laser;
+				rockets[i]->direction_x = 2;
+				rockets[i]->direction_y = 0;
 				return;
 			}
 		}
@@ -375,6 +373,13 @@ struct blue_object **blue_game_create_objects(struct blue_game_state *game_state
 		objects[i]->render = blue_render_handler_rock;	
 	}
 
+	for (int i = MAX; i < (MAX * 2); i++) {
+		objects[i] = blue_object_create("~~~", WEAPON);
+		objects[i]->render = blue_render_handler_laser;
+		objects[i]->x = -1;
+		objects[i]->y = -1;
+	}
+
 	return objects;
 }
 
@@ -438,7 +443,7 @@ int main()
 
 	blue_game_run(game_state, objects);
 
-	blue_array_clean(objects, MAX);
+	blue_array_clean(objects, MAX * 2);
 	blue_array_destroy(objects);
 
 	delwin(game_state->field);
