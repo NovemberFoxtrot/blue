@@ -1,7 +1,7 @@
 #ifndef blue_h
 #define blue_h
 
-#define DELAY 50
+#define DELAY 45
 #define MAX 100
 #define BLUE_SPACE_HEIGHT 11
 #define BLUE_SCORE_HEIGHT 3
